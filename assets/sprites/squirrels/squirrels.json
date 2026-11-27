@@ -1,0 +1,17 @@
+{
+  "_doc": "Sprite-sheet drop-ins for the chibi squirrels. Add <pose>.png (a horizontal strip of equally sized frames) and the engine swaps the procedural squirrel for your sprite in that pose. Squirrels face RIGHT in the art; the engine mirrors them.",
+  "frameWidth": 128,
+  "frameHeight": 128,
+  "anchor": { "x": 0.5, "y": 0.86, "_note": "Feet position inside a frame (0..1). Placed on the squirrel's ground point." },
+  "worldHeight": 40,
+  "poses": {
+    "idle":       { "file": "idle.png",       "frames": 4, "fps": 6 },
+    "tea":        { "file": "tea.png",        "frames": 4, "fps": 5 },
+    "sleep":      { "file": "sleep.png",      "frames": 4, "fps": 3 },
+    "toss":       { "file": "toss.png",       "frames": 6, "fps": 8 },
+    "hauler":     { "file": "hauler.png",     "frames": 6, "fps": 10 },
+    "researcher": { "file": "researcher.png", "frames": 4, "fps": 5 },
+    "focus":      { "file": "focus.png",      "frames": 4, "fps": 5 },
+    "lantern":    { "file": "lantern.png",    "frames": 6, "fps": 8 }
+  }
+}
