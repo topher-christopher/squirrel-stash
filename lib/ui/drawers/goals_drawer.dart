@@ -11,7 +11,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../widgets/animated_money.dart';
 import '../widgets/stash_controls.dart';
-import 'decor_shop.dart';
+import 'colony_cards.dart';
 import 'drawer_shell.dart';
 import 'drawers.dart';
 
@@ -41,7 +41,7 @@ class GoalsBody extends ConsumerWidget {
       ],
       const SizedBox(height: 4),
       PillButton(label: '⛏️ Dig New Goal Chamber', color: AppColors.amberBright, expand: true, onPressed: () => Drawers.newGoal(context)),
-      const RoomUpgradeCard(room: RoomKey.goals),
+      const RoomThemeCard(room: RoomKey.goals),
     ]);
   }
 }

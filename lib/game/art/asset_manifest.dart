@@ -35,7 +35,10 @@ class SpriteSheetSpec {
 ///
 /// At startup it scans Flutter's asset manifest for PNGs in
 ///   assets/images/rooms/     `<room>.png` interiors (see rooms_template.json)
-///   assets/images/props/     chest_lv1..3.png, acorn.png
+///   assets/images/props/     chest_lv1..3.png
+///   assets/images/outfitter/ custom_pokemon_card / custom_film_canister /
+///                            custom_skate_deck .png
+///   assets/images/metro/     custom_caps_flag.png
 ///   assets/sprites/squirrels/ `<pose>.png` described by squirrels.json
 /// and decodes whatever exists. Painters ask for an image and fall back to
 /// procedural art when none is present, so art can be swapped without
@@ -48,6 +51,9 @@ class StashAssetManifest {
   static const roomDir = 'assets/images/rooms/';
   static const propsDir = 'assets/images/props/';
   static const squirrelDir = 'assets/sprites/squirrels/';
+  static const outfitterDir = 'assets/images/outfitter/';
+  static const metroDir = 'assets/images/metro/';
+  static const _dirs = [roomDir, propsDir, squirrelDir, outfitterDir, metroDir];
 
   final Map<String, ui.Image> _images;
   final Map<String, SpriteSheetSpec> _sheets;
@@ -59,17 +65,20 @@ class StashAssetManifest {
 
   ui.Image? prop(String name) => _images['$propsDir$name.png'];
 
+  /// Outfitter drop-ins: `custom_pokemon_card`, `custom_film_canister`,
+  /// `custom_skate_deck`.
+  ui.Image? outfitter(String name) => _images['$outfitterDir$name.png'];
+
+  /// Metro drop-ins: `custom_caps_flag`.
+  ui.Image? metro(String name) => _images['$metroDir$name.png'];
+
   SpriteSheetSpec? squirrel(String pose) => _sheets[pose];
 
   static Future<StashAssetManifest> load([AssetBundle? bundle]) async {
     final assets = bundle ?? rootBundle;
     try {
       final manifest = await AssetManifest.loadFromAssetBundle(assets);
-      final pngs = manifest.listAssets().where((a) =>
-          a.endsWith('.png') &&
-          (a.startsWith(roomDir) ||
-              a.startsWith(propsDir) ||
-              a.startsWith(squirrelDir)));
+      final pngs = manifest.listAssets().where((a) => a.endsWith('.png') && _dirs.any(a.startsWith));
       final images = <String, ui.Image>{};
       for (final path in pngs) {
         images[path] = await _decode(assets, path);

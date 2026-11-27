@@ -113,19 +113,23 @@ void main() {
     expect(actions.reclaim('g1'), isNull, reason: 'unfinished chambers stay');
   });
 
-  test('two-tier upgrades: rooms cost Acorns, Grand Tree costs Acorns + Golden', () {
+  test('room themes, the Starter | Max switch and Grand Tree looks are free', () {
     final acorns = read(settingsProvider).acorns;
-    expect(actions.upgradeRoom(RoomKey.lab), isTrue);
-    expect(read(roomsProvider).levelOf(RoomKey.lab), 2);
-    expect(read(settingsProvider).acorns, acorns - 300);
-    expect(harness.repository.settings['room_lv_lab'], '2');
     final golden = read(settingsProvider).goldenAcorns;
-    actions.buyOrToggleDecor(DecorKey.twilightSky);
+    actions.setRoomTheme(RoomKey.lab, 3);
+    expect(read(roomsProvider).levelOf(RoomKey.lab), 3);
+    expect(harness.repository.settings['room_lv_lab'], '3');
+    actions.toggleDecor(DecorKey.twilightSky);
     expect(read(decorProvider)[DecorKey.twilightSky]!.active, isTrue);
-    expect(read(settingsProvider).goldenAcorns, golden - 1);
-    actions.buyOrToggleDecor(DecorKey.twilightSky);
-    actions.buyOrToggleDecor(DecorKey.twilightSky);
-    expect(read(settingsProvider).goldenAcorns, golden - 1, reason: 'toggling owned upgrades is free');
+    actions.toggleDecor(DecorKey.twilightSky);
+    expect(read(decorProvider)[DecorKey.twilightSky]!.active, isFalse);
+    actions.setAllRoomThemes(3);
+    expect(read(roomsProvider).allMax, isTrue);
+    expect(harness.repository.settings['room_lv_hearth'], '3');
+    actions.setAllRoomThemes(1);
+    expect(read(roomsProvider).allStarter, isTrue);
+    expect((read(settingsProvider).acorns, read(settingsProvider).goldenAcorns), (acorns, golden),
+        reason: 'no cosmetic paywalls');
   });
 
   test('Professor Hoot gifts Acorns once per day; focus pays Acorns', () {

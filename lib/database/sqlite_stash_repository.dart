@@ -1,7 +1,9 @@
 import 'package:sqflite/sqflite.dart';
 
 import '../models/bill.dart';
+import '../models/bird.dart';
 import '../models/decor.dart';
+import '../models/expedition.dart';
 import '../models/feat.dart';
 import '../models/goal.dart';
 import '../models/grocery_trip.dart';
@@ -31,6 +33,21 @@ class SqliteStashRepository implements StashRepository {
       final item = DecorItemState.fromMap(row);
       if (item != null) decor.add(item);
     }
+    final expeditions = <Expedition>[];
+    for (final row in await _db.query(Schema.expeditions, orderBy: 'started_at')) {
+      final e = Expedition.fromMap(row);
+      if (e != null) expeditions.add(e);
+    }
+    final seedBags = <SeedKind, int>{};
+    for (final row in await _db.query(Schema.seedBags)) {
+      final seed = SeedKind.tryParse(row['seed'] as String?);
+      if (seed != null) seedBags[seed] = (row['bags'] as num).toInt();
+    }
+    final birdLog = <BirdLogEntry>[];
+    for (final row in await _db.query(Schema.birdLog)) {
+      final entry = BirdLogEntry.fromMap(row);
+      if (entry != null) birdLog.add(entry);
+    }
     return StashSnapshot(
       settings: {
         for (final r in await _db.query(Schema.settings))
@@ -47,6 +64,9 @@ class SqliteStashRepository implements StashRepository {
       groceries: await _all(Schema.groceries, GroceryTrip.fromMap, 'trip_at DESC'),
       rides: await _all(Schema.rides, MetroRide.fromMap, 'ride_at DESC'),
       awards: await _all(Schema.awards, FeatAward.fromMap, 'awarded_at'),
+      expeditions: expeditions,
+      seedBags: seedBags,
+      birdLog: birdLog,
     );
   }
 
@@ -77,6 +97,9 @@ class SqliteStashRepository implements StashRepository {
       insertAll(Schema.groceries, s.groceries.map((e) => e.toMap()));
       insertAll(Schema.rides, s.rides.map((e) => e.toMap()));
       insertAll(Schema.awards, s.awards.map((e) => e.toMap()));
+      insertAll(Schema.expeditions, s.expeditions.map((e) => e.toMap()));
+      insertAll(Schema.seedBags, [for (final e in s.seedBags.entries) {'seed': e.key.name, 'bags': e.value}]);
+      insertAll(Schema.birdLog, s.birdLog.map((e) => e.toMap()));
       await batch.commit(noResult: true);
     });
   }
@@ -161,6 +184,17 @@ class SqliteStashRepository implements StashRepository {
   @override
   Future<void> upsertAwards(List<FeatAward> awards) =>
       _upsertMany(Schema.awards, awards.map((a) => a.toMap()));
+
+  @override
+  Future<void> upsertExpedition(Expedition expedition) => _upsert(Schema.expeditions, expedition.toMap());
+
+  @override
+  Future<void> putSeedBags(SeedKind seed, int bags) =>
+      _upsert(Schema.seedBags, {'seed': seed.name, 'bags': bags});
+
+  @override
+  Future<void> upsertBirdLog(List<BirdLogEntry> entries) =>
+      _upsertMany(Schema.birdLog, entries.map((e) => e.toMap()));
 
   @override
   Future<void> close() => _db.close();

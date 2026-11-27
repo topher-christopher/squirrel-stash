@@ -2,128 +2,139 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import '../art/paint_kit.dart';
-import '../art/squirrel_outfits.dart';
-import '../art/squirrel_painter.dart';
+import 'custodian.dart';
 import 'room_kit.dart';
 
-/// Trophy Hall: a lantern-lit museum where earned trophies fill the shelves,
-/// overflow into boxes underneath, and goal statues stand in a glass case.
+/// Trophy Hall & Stats (compact): two trophy shelves along the back wall,
+/// overflow crates, a statue case, a center pedestal, a standing mirror, a
+/// mouse hole and a side doorway — the stage for the custodian's routine.
+/// Room-local units (172 × 144, floor at 128).
 class TrophyHallArt extends RoomArt {
   const TrophyHallArt();
 
-  static const _perShelf = 6;
-  static const _shelves = 3;
+  static const floor = 128.0;
+  static const _perShelf = 8;
 
   @override
   void paintStatic(Canvas c, RoomCtx x) {
     RoomKit.shell(c, x, wall: const Color(0xFF2E1A10));
     c.save();
     c.translate(x.r.left, x.r.top);
-    final floor = x.r.height - 16;
-    // Wall shelves on both sides of the display case
     final count = x.snap.trophyCount;
     var placed = 0;
-    for (var s = 0; s < _shelves; s++) {
-      final y = 40.0 + s * 30;
-      for (final side in const [(10.0, 112.0), (188.0, 290.0)]) {
-        RoomKit.shelf(c, side.$1, side.$2, y);
-        for (var k = 0; k < _perShelf; k++) {
-          if (placed >= count) break;
-          _trophy(c, Offset(side.$1 + 10 + k * 16.0, y), placed);
-          placed++;
-        }
+    for (var s = 0; s < 2; s++) {
+      final y = 30.0 + s * 24;
+      RoomKit.shelf(c, 10, 162, y);
+      for (var k = 0; k < _perShelf && placed < count; k++) {
+        _trophy(c, Offset(20 + k * 18.0, y), placed);
+        placed++;
       }
     }
-    // Overflow boxes stacked under the shelves
-    final overflow = math.min(8, math.max(0, count - placed));
+    final overflow = math.min(6, math.max(0, count - placed));
     for (var b = 0; b < overflow; b++) {
-      final col = b % 4, row = b ~/ 4;
-      final left = b.isEven ? 14.0 + col * 12 : 198.0 + col * 12;
-      RoomKit.crate(c, Rect.fromLTWH(left, floor - 12 - row * 12, 14, 12),
-          color: const Color(0xFF92400E));
+      RoomKit.crate(c, Rect.fromLTWH(50 + (b % 3) * 13.0, floor - 11 - (b ~/ 3) * 11.0, 12, 11), color: const Color(0xFF92400E));
     }
-    _displayCase(c, Rect.fromLTWH(122, 22, 56, floor - 22), x.snap.statueCount, x.level);
-    if (x.level >= 2) RoomKit.rug(c, Offset(150, floor + 7), 60, const Color(0xFF7F1D1D));
+    _case(c, Rect.fromLTWH(6, 64, 38, floor - 64), x.snap.statueCount, x.level);
+    // Center pedestal with the featured cup
+    c.drawRect(const Rect.fromLTWH(84, floor - 18, 18, 18), Kit.linear(const Offset(84, 0), const Offset(102, 0),
+        const [Color(0xFF78716C), Color(0xFFD6D3D1), Color(0xFF78716C)]));
+    c.drawRect(const Rect.fromLTWH(81, floor - 21, 24, 4), Kit.fill(const Color(0xFFA8A29E)));
+    _trophy(c, const Offset(93, floor - 21), 0, scale: 1.4);
+    // Standing mirror
+    const mirror = Rect.fromLTWH(118, 70, 24, floor - 72);
+    c.drawRRect(Kit.rr(mirror.inflate(2.5), 10), Kit.fill(const Color(0xFF78350F)));
+    c.drawRRect(Kit.rr(mirror, 9), Kit.vertical(mirror, const [Color(0xFFBAE6FD), Color(0xFF64748B)]));
+    c.drawLine(mirror.topLeft.translate(5, 10), mirror.topLeft.translate(10, 4), Kit.stroke(const Color(0x88FFFFFF), 1.4));
+    // Mouse hole (left wall) and arched side doorway (right wall)
+    c.drawPath(Path()
+      ..moveTo(2, floor)
+      ..lineTo(2, floor - 9)
+      ..quadraticBezierTo(8, floor - 17, 14, floor - 9)
+      ..lineTo(14, floor)
+      ..close(), Kit.fill(const Color(0xFF0C0603)));
+    final door = RRect.fromRectAndCorners(const Rect.fromLTWH(150, floor - 34, 18, 34),
+        topLeft: const Radius.circular(9), topRight: const Radius.circular(9));
+    c.drawRRect(door, Kit.fill(const Color(0xFF0C0603)));
+    c.drawRRect(door, Kit.stroke(const Color(0xFF8B5A2B), 1.4));
+    if (x.level >= 2) RoomKit.rug(c, const Offset(93, floor + 6), 44, const Color(0xFF7F1D1D));
+    if (x.level >= 3) {
+      // Velvet rope stanchions around the pedestal
+      for (final dx in const [70.0, 116.0]) {
+        c.drawLine(Offset(dx, floor), Offset(dx, floor - 14), Kit.stroke(const Color(0xFFFBBF24), 1.6));
+        c.drawCircle(Offset(dx, floor - 15), 1.8, Kit.fill(const Color(0xFFFBBF24)));
+      }
+      c.drawPath(Path()..moveTo(70, floor - 12)..quadraticBezierTo(93, floor - 4, 116, floor - 12),
+          Kit.stroke(const Color(0xFFB91C1C), 1.6));
+    }
     c.restore();
   }
 
   @override
   void paintLive(Canvas c, RoomCtx x) {
     final r = x.r;
-    RoomKit.lamp(c, Offset(r.left + 60, r.top + 12), x.t);
-    RoomKit.lamp(c, Offset(r.right - 60, r.top + 12), x.t);
-    // Case glint sweeping across the glass
+    RoomKit.lamp(c, Offset(r.left + 40, r.top + 12), x.t);
+    RoomKit.lamp(c, Offset(r.right - 40, r.top + 12), x.t);
+    if (x.level >= 3) {
+      // Spotlight on the featured cup
+      c.drawPath(Path()
+        ..moveTo(r.left + 88, r.top + 6)
+        ..lineTo(r.left + 98, r.top + 6)
+        ..lineTo(r.left + 112, r.top + floor)
+        ..lineTo(r.left + 74, r.top + floor)
+        ..close(), Kit.fill(const Color(0x14FEF9C3)));
+    }
     final s = (x.t * 0.3) % 1.6;
     if (s < 1) {
-      final gx = r.left + 122 + s * 56;
-      c.drawLine(Offset(gx, r.top + 26), Offset(gx - 8, r.bottom - 22),
-          Kit.stroke(const Color(0x55FFFFFF), 2.2));
+      final gx = r.left + 6 + s * 38;
+      c.drawLine(Offset(gx, r.top + 68), Offset(gx - 6, r.top + floor - 4), Kit.stroke(const Color(0x55FFFFFF), 1.8));
     }
-    // Curator squirrel dusting the shelves, pacing left ↔ right
-    final pace = Ease.pingPong(x.t / 6);
-    final px = r.left + 30 + pace * 240;
-    final dir = (x.t / 6) % 2 < 1 ? 1.0 : -1.0;
-    final skipCase = px > r.left + 112 && px < r.left + 190;
-    SquirrelPainter.paint(c, Offset(px, x.floorY - 14 - (skipCase ? 0 : 0)),
-        dir: dir, scale: 0.95, time: x.t, seed: 3.7,
-        look: SquirrelLook(prop: SquirrelProp.duster, scarf: x.frost,
-            hat: x.snap.outfits ? SquirrelHat.visor : SquirrelHat.none),
-        art: x.art);
+    Custodian.paint(c, x);
     if (x.level >= 3 || x.detail > 0.05) {
       final a = x.level >= 3 ? 1.0 : x.detail;
       c.saveLayer(null, Paint()..color = Color.fromRGBO(255, 255, 255, a));
-      for (var k = 0; k < 4; k++) {
+      for (var k = 0; k < 3; k++) {
         final ph = (x.t * 0.5 + k * 0.27) % 1.0;
-        Kit.sparkle(c, Offset(r.left + 130 + k * 12, r.top + 40 + math.sin(k * 2.0) * 20),
-            2.4 * math.sin(ph * math.pi), const Color(0xFFFFF7AE));
+        Kit.sparkle(c, Offset(r.left + 12 + k * 12, r.top + 80 + math.sin(k * 2.0) * 16),
+            2.2 * math.sin(ph * math.pi), const Color(0xFFFFF7AE));
       }
       c.restore();
     }
   }
 
-  static void _trophy(Canvas c, Offset shelfTop, int i) {
-    final o = shelfTop;
+  static void _trophy(Canvas c, Offset o, int i, {double scale = 1}) {
+    c.save();
+    c.translate(o.dx, o.dy);
+    c.scale(scale);
     switch (i % 3) {
-      case 0: // cup
-        c.drawPath(Path()..moveTo(o.dx - 4, o.dy - 12)..lineTo(o.dx + 4, o.dy - 12)
-          ..quadraticBezierTo(o.dx + 4, o.dy - 5, o.dx, o.dy - 5)
-          ..quadraticBezierTo(o.dx - 4, o.dy - 5, o.dx - 4, o.dy - 12)..close(), Kit.fill(const Color(0xFFFACC15)));
-        c.drawRect(Rect.fromLTWH(o.dx - 1, o.dy - 5, 2, 3), Kit.fill(const Color(0xFFD97706)));
-        c.drawRect(Rect.fromLTWH(o.dx - 3.5, o.dy - 2, 7, 2), Kit.fill(const Color(0xFF78350F)));
-      case 1: // shield
-        c.drawPath(Path()..moveTo(o.dx - 4.5, o.dy - 13)..lineTo(o.dx + 4.5, o.dy - 13)
-          ..lineTo(o.dx + 4.5, o.dy - 7)..quadraticBezierTo(o.dx, o.dy - 1, o.dx - 4.5, o.dy - 7)..close(),
-            Kit.fill(const Color(0xFF94A3B8)));
-        c.drawLine(Offset(o.dx, o.dy - 12), Offset(o.dx, o.dy - 3), Kit.stroke(const Color(0xFFDC2626), 1.2));
-      default: // medal plaque
-        c.drawRRect(Kit.rr(Rect.fromLTWH(o.dx - 4.5, o.dy - 12, 9, 12), 1.5), Kit.fill(const Color(0xFF92400E)));
-        c.drawCircle(Offset(o.dx, o.dy - 6), 2.8, Kit.fill(const Color(0xFFFB923C)));
+      case 0:
+        c.drawPath(Path()..moveTo(-4, -12)..lineTo(4, -12)..quadraticBezierTo(4, -5, 0, -5)
+          ..quadraticBezierTo(-4, -5, -4, -12)..close(), Kit.fill(const Color(0xFFFACC15)));
+        c.drawRect(const Rect.fromLTWH(-1, -5, 2, 3), Kit.fill(const Color(0xFFD97706)));
+        c.drawRect(const Rect.fromLTWH(-3.5, -2, 7, 2), Kit.fill(const Color(0xFF78350F)));
+      case 1:
+        c.drawPath(Path()..moveTo(-4.5, -13)..lineTo(4.5, -13)..lineTo(4.5, -7)
+          ..quadraticBezierTo(0, -1, -4.5, -7)..close(), Kit.fill(const Color(0xFF94A3B8)));
+        c.drawLine(const Offset(0, -12), const Offset(0, -3), Kit.stroke(const Color(0xFFDC2626), 1.2));
+      default:
+        c.drawRRect(Kit.rr(const Rect.fromLTWH(-4.5, -12, 9, 12), 1.5), Kit.fill(const Color(0xFF92400E)));
+        c.drawCircle(const Offset(0, -6), 2.8, Kit.fill(const Color(0xFFFB923C)));
     }
+    c.restore();
   }
 
-  static void _displayCase(Canvas c, Rect b, int statues, int level) {
-    Kit.glow(c, b.center, 46, const Color(0xFFFDE68A), level >= 2 ? 0.22 : 0.12);
-    c.drawRRect(Kit.rr(Rect.fromLTWH(b.left - 3, b.bottom - 10, b.width + 6, 10), 2), Kit.fill(const Color(0xFF6B3D1E)));
-    final glass = Rect.fromLTRB(b.left, b.top, b.right, b.bottom - 10);
+  static void _case(Canvas c, Rect b, int statues, int level) {
+    Kit.glow(c, b.center, 30, const Color(0xFFFDE68A), level >= 2 ? 0.2 : 0.1);
+    c.drawRRect(Kit.rr(Rect.fromLTWH(b.left - 2, b.bottom - 8, b.width + 4, 8), 2), Kit.fill(const Color(0xFF6B3D1E)));
+    final glass = Rect.fromLTRB(b.left, b.top, b.right, b.bottom - 8);
     c.drawRRect(Kit.rr(glass, 3), Kit.fill(const Color(0x33BAE6FD)));
-    c.drawRRect(Kit.rr(glass, 3), Kit.stroke(const Color(0xFFFBBF24), 1.4));
-    for (var tier = 0; tier < 2; tier++) {
-      final y = glass.top + 34 + tier * 36;
-      c.drawLine(Offset(glass.left + 2, y), Offset(glass.right - 2, y), Kit.stroke(const Color(0x88FDE68A), 1));
+    c.drawRRect(Kit.rr(glass, 3), Kit.stroke(const Color(0xFFFBBF24), 1.2));
+    final tier = glass.top + glass.height / 2;
+    c.drawLine(Offset(glass.left + 2, tier), Offset(glass.right - 2, tier), Kit.stroke(const Color(0x88FDE68A), 1));
+    for (var k = 0; k < math.min(4, statues); k++) {
+      final base = Offset(glass.left + 10 + (k % 2) * 18, k < 2 ? tier : glass.bottom - 1);
+      c.drawRect(Rect.fromLTWH(base.dx - 5, base.dy - 3, 10, 3), Kit.fill(const Color(0xFF78350F)));
+      c.drawOval(Kit.oval(base.translate(0, -8), 3.6, 5), Kit.fill(const Color(0xFFFACC15)));
+      c.drawCircle(base.translate(0.5, -15), 3, Kit.fill(const Color(0xFFFACC15)));
     }
-    final shown = math.min(4, statues);
-    for (var k = 0; k < shown; k++) {
-      final y = glass.top + 34 + (k ~/ 2) * 36;
-      final x = glass.left + 16 + (k % 2) * 24;
-      _statue(c, Offset(x, y));
-    }
-  }
-
-  static void _statue(Canvas c, Offset base) {
-    c.drawRect(Rect.fromLTWH(base.dx - 6, base.dy - 4, 12, 4), Kit.fill(const Color(0xFF78350F)));
-    c.drawOval(Kit.oval(base.translate(0, -10), 4.5, 6), Kit.fill(const Color(0xFFFACC15)));
-    c.drawCircle(base.translate(0.5, -18), 3.6, Kit.fill(const Color(0xFFFACC15)));
-    c.drawPath(Path()..moveTo(base.dx - 4, base.dy - 8)..quadraticBezierTo(base.dx - 10, base.dy - 14, base.dx - 6, base.dy - 20),
-        Kit.stroke(const Color(0xFFEAB308), 2.4));
   }
 }

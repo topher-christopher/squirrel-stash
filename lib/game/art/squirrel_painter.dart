@@ -6,6 +6,7 @@ import 'package:flutter/painting.dart' show TextPainter, TextSpan, TextStyle;
 import 'asset_manifest.dart';
 import 'paint_kit.dart';
 import 'palette.dart';
+import 'squirrel_gear.dart';
 import 'squirrel_outfits.dart';
 
 enum SquirrelPose { idle, tea, sleep, toss, hauler, researcher, focus, lantern }
@@ -20,6 +21,11 @@ class SquirrelLook {
     this.prop = SquirrelProp.none,
     this.suit = false,
     this.book = false,
+    this.jacket = false,
+    this.jersey = false,
+    this.backpack = false,
+    this.seedBag,
+    this.albino = false,
   });
 
   final bool scarf;
@@ -31,6 +37,17 @@ class SquirrelLook {
   /// Navy commuter jacket & tie.
   final bool suit;
   final bool book;
+  final bool jacket;
+
+  /// Red Caps-fan hockey jersey.
+  final bool jersey;
+  final bool backpack;
+
+  /// Carrying a seed bag tied with this color.
+  final Color? seedBag;
+
+  /// Snow-white fur and pink eyes (a rare feeder visitor).
+  final bool albino;
 }
 
 /// Cozy chibi squirrel (Cats & Soup / Focus Friend aesthetic), drawn in a
@@ -62,6 +79,14 @@ abstract final class SquirrelPainter {
         textDirection: TextDirection.ltr,
       )..layout();
 
+  /// Set by the Great Oak for one frame: an unfueled Hearth puts every
+  /// squirrel to sleep where it stands; winter dresses everyone warmly.
+  static bool sleepAll = false;
+  static bool winterAll = false;
+
+  /// Real time for breathing & zZz while [sleepAll] freezes the work clock.
+  static double clock = 0;
+
   static void paint(
     Canvas canvas,
     Offset at, {
@@ -75,6 +100,12 @@ abstract final class SquirrelPainter {
     double hop = 0,
     StashAssetManifest? art,
   }) {
+    if (sleepAll) {
+      pose = SquirrelPose.sleep;
+      hop = 0;
+      time = clock;
+    }
+    final winter = winterAll && !look.suit && !look.jersey;
     canvas.save();
     canvas.translate(at.dx, at.dy + hop);
     canvas.scale(dir * scale, scale);
@@ -96,9 +127,10 @@ abstract final class SquirrelPainter {
       return;
     }
 
-    final fur = look.golden ? Pal.goldFur : Pal.fur;
-    final belly = look.golden ? Pal.goldBelly : Pal.furBelly;
-    final tailColor = look.golden ? Pal.goldTail : Pal.furTail;
+    final fur = look.albino ? const Color(0xFFF8FAFC) : (look.golden ? Pal.goldFur : Pal.fur);
+    final belly = look.albino ? const Color(0xFFFCE7F3) : (look.golden ? Pal.goldBelly : Pal.furBelly);
+    final tailColor = look.albino ? const Color(0xFFE2E8F0) : (look.golden ? Pal.goldTail : Pal.furTail);
+    if (look.backpack) SquirrelGear.backpack(canvas);
     final ink = Kit.stroke(Pal.outline, 1.2);
     final breath = math.sin(time * 2.1 + seed) * 0.45;
 
@@ -122,8 +154,10 @@ abstract final class SquirrelPainter {
     canvas.drawOval(body, ink);
     canvas.drawOval(Kit.oval(const Offset(2.5, 6), 5, 6.2), Kit.fill(belly));
     if (look.suit) SquirrelOutfits.suit(canvas);
+    if (look.jersey) SquirrelGear.jersey(canvas);
+    if (look.jacket || winter) SquirrelGear.jacket(canvas);
 
-    if (look.scarf) {
+    if (look.scarf || winter) {
       canvas.drawRRect(Kit.rr(const Rect.fromLTWH(-7, -2.5, 15, 4.2), 2),
           Kit.fill(Pal.scarf));
       canvas.drawRRect(Kit.rr(const Rect.fromLTWH(-7, -2.5, 15, 4.2), 2),
@@ -152,8 +186,8 @@ abstract final class SquirrelPainter {
     canvas.drawCircle(const Offset(1.5, -7), 8.2, ink);
     canvas.drawOval(Kit.oval(const Offset(5.5, -4.2), 3.6, 2.6), Kit.fill(Kit.a(belly, 0.85)));
 
-    _paintHats(canvas, look);
-    _paintFace(canvas, pose, time, seed);
+    SquirrelOutfits.hat(canvas, winter && look.hat == SquirrelHat.none ? SquirrelHat.beanie : look.hat);
+    _paintFace(canvas, pose, time, seed, look.albino);
     canvas.restore();
 
     _paintProps(canvas, pose, look, time, seed, fur);
@@ -179,10 +213,7 @@ abstract final class SquirrelPainter {
         Paint()..filterQuality = FilterQuality.medium);
   }
 
-  static void _paintHats(Canvas canvas, SquirrelLook look) =>
-      SquirrelOutfits.hat(canvas, look.hat);
-
-  static void _paintFace(Canvas canvas, SquirrelPose pose, double time, double seed) {
+  static void _paintFace(Canvas canvas, SquirrelPose pose, double time, double seed, bool albino) {
     final ink = Kit.stroke(Pal.outline, 1.3);
     if (pose == SquirrelPose.sleep) {
       canvas.drawPath(
@@ -195,7 +226,7 @@ abstract final class SquirrelPainter {
       if (blinking) {
         canvas.drawLine(const Offset(3.4, -7.8), const Offset(6.2, -7.8), ink);
       } else {
-        canvas.drawCircle(const Offset(4.8, -7.8), 1.7, Kit.fill(Pal.eye));
+        canvas.drawCircle(const Offset(4.8, -7.8), 1.7, Kit.fill(albino ? const Color(0xFFE11D48) : Pal.eye));
         canvas.drawCircle(const Offset(5.3, -8.3), 0.6, Kit.fill(const Color(0xFFFFFFFF)));
       }
     }
@@ -218,58 +249,13 @@ abstract final class SquirrelPainter {
   static void _paintProps(Canvas canvas, SquirrelPose pose, SquirrelLook look,
       double time, double seed, Color fur) {
     final paw = Kit.fill(fur);
-    switch (pose) {
-      case SquirrelPose.tea:
-        canvas.save();
-        canvas.translate(8, 3);
-        canvas.drawRRect(Kit.rr(const Rect.fromLTWH(-3, -3, 6, 6.5), 1.5),
-            Kit.fill(const Color(0xFFF8FAFC)));
-        canvas.drawRRect(Kit.rr(const Rect.fromLTWH(-3, -3, 6, 6.5), 1.5),
-            Kit.stroke(Pal.acornCap, 1));
-        final s = (time * 0.42 + seed) % 1.0;
-        final steam = Path()
-          ..moveTo(0, -5 - s * 3)
-          ..quadraticBezierTo(2, -8 - s * 3, 0, -11 - s * 3);
-        canvas.drawPath(steam,
-            Kit.stroke(Color.fromRGBO(255, 255, 255, 0.85 * math.sin(s * math.pi)), 1.1));
-        canvas.restore();
-        canvas.drawOval(Kit.oval(const Offset(5.6, 4.2), 2.1, 1.6), paw);
-      case SquirrelPose.toss:
-        final arc = (math.sin(time * 2.4 + seed)).abs();
-        Kit.acorn(canvas, Offset(8, -10 - arc * 9), rx: 3.4, ry: 4.2, strokeWidth: 0.8);
-        canvas.drawOval(Kit.oval(const Offset(6.8, -1.5), 2, 1.6), paw);
-      case SquirrelPose.lantern:
-        canvas.save();
-        canvas.translate(10, 2);
-        final flicker = 0.3 + 0.08 * math.sin(time * 9 + seed);
-        Kit.glow(canvas, const Offset(0, 3), 11, const Color(0xFFFEF08A), flicker + 0.2);
-        canvas.drawRRect(Kit.rr(const Rect.fromLTWH(-2.5, 0, 5, 6), 1.2),
-            Kit.fill(const Color(0xFFFACC15)));
-        canvas.drawRRect(Kit.rr(const Rect.fromLTWH(-2.5, 0, 5, 6), 1.2),
-            Kit.stroke(Pal.acornCap, 0.9));
-        canvas.drawLine(const Offset(0, 0), const Offset(-2, -3), Kit.stroke(Pal.acornCap, 0.8));
-        canvas.restore();
-      case SquirrelPose.focus:
-      case SquirrelPose.researcher:
-        if (look.book) {
-          canvas.drawRRect(Kit.rr(const Rect.fromLTWH(4, 1, 9, 6), 1),
-              Kit.fill(const Color(0xFF7C2D12)));
-          canvas.drawRect(const Rect.fromLTWH(5, 1.6, 7, 4.8),
-              Kit.fill(const Color(0xFFFEF3C7)));
-          canvas.drawLine(const Offset(8.5, 1.6), const Offset(8.5, 6.4),
-              Kit.stroke(Pal.acornCap, 0.6));
-        }
-        canvas.drawOval(Kit.oval(const Offset(6, 4), 2, 1.6), paw);
-      case SquirrelPose.idle:
-      case SquirrelPose.sleep:
-      case SquirrelPose.hauler:
-        break;
-    }
+    SquirrelOutfits.poseProp(canvas, pose, look.book, time, seed, paw);
     if (look.acorn) {
       Kit.acorn(canvas, const Offset(8, 1), rx: 4.2, ry: 5,
           body: look.golden ? Pal.gold : Pal.acorn);
       canvas.drawOval(Kit.oval(const Offset(4.8, 3), 2, 1.6), paw);
     }
     SquirrelOutfits.prop(canvas, look.prop, time, seed, paw);
+    if (look.seedBag != null) SquirrelGear.seedBag(canvas, look.seedBag!);
   }
 }

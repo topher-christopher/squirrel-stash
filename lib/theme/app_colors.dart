@@ -1,7 +1,7 @@
 import 'dart:ui' show Color;
 
 /// Warm oak, amber, emerald and frost color tokens shared by the UI and the
-/// diorama. Values mirror the palette established in GEMINI_PROTOTYPE.txt.
+/// diorama. Values mirror the palette from the original v1 prototype.
 abstract final class AppColors {
   // Night bark & oak wood
   static const night = Color(0xFF180E08);

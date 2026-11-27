@@ -19,7 +19,8 @@ class _Mote {
 }
 
 /// Falling leaves drifting from the crown (the Cozy Zen centerpiece),
-/// Frostline snowfall over the whole tree, and twilight fireflies.
+/// Frostline snowfall over the whole tree, twilight fireflies, and the cozy
+/// dim that settles over the tree while the Deep-Root Hearth is out.
 class WeatherLayer extends DioramaLayer {
   WeatherLayer() : super(priority: 60);
 
@@ -47,8 +48,8 @@ class WeatherLayer extends DioramaLayer {
 
   @override
   void update(double dt) {
-    if (snap.frost) {
-      _snowAcc += dt * 26;
+    if (snap.frost || snap.winter) {
+      _snowAcc += dt * (snap.frost ? 26 : 12);
       while (_snowAcc >= 1) {
         _snowAcc -= 1;
         _motes.add(_Mote(Offset(_rng.nextDouble() * TreeLayout.width, -4),
@@ -76,6 +77,11 @@ class WeatherLayer extends DioramaLayer {
 
   @override
   void render(Canvas canvas) {
+    final dim = 1 - game.wake;
+    if (dim > 0.01) {
+      canvas.drawRect(const Rect.fromLTWH(0, 0, TreeLayout.width, TreeLayout.height),
+          Kit.fill(Color.fromRGBO(30, 27, 75, 0.34 * dim)));
+    }
     for (final m in _motes) {
       if (m.leaf) {
         canvas.save();

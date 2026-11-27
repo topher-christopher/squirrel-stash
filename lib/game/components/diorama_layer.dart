@@ -10,4 +10,7 @@ abstract class DioramaLayer extends Component
 
   TreeSnapshot get snap => game.snapshot;
   double get t => game.time;
+
+  /// Colony work clock (frozen while the Hearth is out).
+  double get work => game.activity;
 }

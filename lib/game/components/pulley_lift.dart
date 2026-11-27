@@ -16,9 +16,10 @@ class _Drop {
   bool burst = false;
 }
 
-/// The central acorn-pulley lift ferrying squirrels between trunk floors
-/// and the Metro platform, terrace strollers, and golden acorns dropped
-/// down the shaft when cash is allocated to a goal.
+/// The central acorn-pulley lift ferrying squirrels from the Canopy Terrace
+/// through the trunk floors down to the root concourse (it stops there —
+/// the Metro has its own stairs), and golden acorns dropped down the shaft
+/// when cash is allocated to a goal. It parks while the Hearth is out.
 class PulleyLift extends DioramaLayer {
   PulleyLift() : super(priority: 40);
 
@@ -32,11 +33,11 @@ class PulleyLift extends DioramaLayer {
 
   /// Basket floor y for the current moment of the looping route.
   double _basketY() {
-    final stops = [TreeLayout.liftStops.first - 160, ...TreeLayout.liftStops];
+    const stops = TreeLayout.liftStops;
     final route = [...stops, ...stops.reversed.skip(1).take(stops.length - 2)];
     final leg = _travel + _dwell;
     final total = route.length * leg;
-    final tt = t % total;
+    final tt = work % total;
     final i = (tt / leg).floor();
     final local = tt - i * leg;
     final from = route[i];
@@ -66,7 +67,7 @@ class PulleyLift extends DioramaLayer {
     canvas.drawCircle(p, 11, Kit.fill(const Color(0xFF92400E)));
     canvas.drawCircle(p, 11, Kit.stroke(Pal.brass, 2));
     for (var k = 0; k < 4; k++) {
-      final a = t * 1.6 + k * math.pi / 2;
+      final a = work * 1.6 + k * math.pi / 2;
       canvas.drawLine(p, p + Offset(math.cos(a), math.sin(a)) * 9, Kit.stroke(Pal.brass, 1.4));
     }
     canvas.drawCircle(p, 2.4, Kit.fill(Pal.brass));
@@ -93,24 +94,9 @@ class PulleyLift extends DioramaLayer {
         look: SquirrelLook(acorn: true, golden: snap.oakLevel >= 4, scarf: snap.frost,
             hat: snap.outfits ? SquirrelHat.goggles : SquirrelHat.none),
         art: game.art);
-    _terraceStroller(canvas);
     for (final d in _drops) {
       _paintDrop(canvas, d);
     }
-  }
-
-  void _terraceStroller(Canvas canvas) {
-    const period = 9.0;
-    final u = Ease.easeInOut(Ease.pingPong(t / period));
-    final forward = (t / period) % 2 < 1;
-    final px = 60 + u * 480;
-    SquirrelPainter.paint(canvas, Offset(px, TreeLayout.groundY - 6),
-        dir: forward ? 1 : -1, scale: 0.75, time: t, seed: 14.2,
-        hop: -math.sin(t * 8).abs() * 1.4,
-        pose: snap.focusRunning ? SquirrelPose.focus : SquirrelPose.lantern,
-        look: SquirrelLook(scarf: snap.frost, book: snap.focusRunning,
-            hat: snap.outfits ? SquirrelHat.scholar : SquirrelHat.none),
-        art: game.art);
   }
 
   void _paintDrop(Canvas canvas, _Drop d) {

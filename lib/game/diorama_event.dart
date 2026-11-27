@@ -34,6 +34,27 @@ enum DioramaEventKind {
 
   /// New trophy earned.
   trophy,
+
+  /// Wild acorn bubbles harvested above the canopy.
+  harvest,
+
+  /// A scavenger squad popped out of the burrow with a backpack.
+  expeditionStart,
+
+  /// A squad sprinted home carrying a seed bag.
+  expeditionReturn,
+
+  /// A seed bag was poured into the Canopy Bird Feeder.
+  pourSeed,
+
+  /// The Deep-Root Hearth was fueled (or overdriven).
+  hearthFuel,
+
+  /// A 24h Colony Festival started.
+  festival,
+
+  /// A feeder lure or temporary feeder upgrade was set out.
+  lure,
 }
 
 /// One-shot visual effect request sent from the app to the Great Oak.

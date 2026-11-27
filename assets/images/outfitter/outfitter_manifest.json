@@ -1,0 +1,8 @@
+{
+  "_doc": "Optional Acorn Outfitter drop-ins. Save any of these PNGs in this folder and rebuild; the Great Oak draws them instead of the procedural art. Sizes are world units (the world is 600 x 1150); export at 4x for crisp zoom.",
+  "images": {
+    "custom_pokemon_card.png":  { "box": { "w": 40, "h": 56 }, "use": "Giant Framed Pokemon Card on the Outfitter wall (the frame is drawn around it)" },
+    "custom_film_canister.png": { "box": { "w": 14, "h": 22 }, "use": "One 35mm film canister (stacked into the grain barrel pyramid)" },
+    "custom_skate_deck.png":    { "box": { "w": 24, "h": 6 },  "use": "Skateboard deck, side view, nose to the right (wheels are drawn under it)" }
+  }
+}

@@ -1,7 +1,7 @@
 name: squirrel_stash
 description: "Cozy passive-simulation finance tracker & ambient focus companion."
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.2.0+2
 
 environment:
   sdk: ^3.14.0
@@ -55,6 +55,8 @@ flutter:
     - assets/images/rooms/
     - assets/images/icons/
     - assets/images/props/
+    - assets/images/outfitter/
+    - assets/images/metro/
     - assets/sprites/squirrels/
 
   fonts:

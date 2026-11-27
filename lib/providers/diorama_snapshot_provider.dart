@@ -4,7 +4,8 @@ import '../core/dates.dart';
 import '../game/diorama_snapshot.dart';
 import '../models/decor.dart';
 import '../models/room.dart';
-import 'bills_provider.dart';
+import 'clock_provider.dart';
+import 'colony_provider.dart';
 import 'finance_math.dart';
 import 'finance_providers.dart';
 import 'focus_provider.dart';
@@ -14,17 +15,8 @@ import 'rooms_provider.dart';
 import 'settings_provider.dart';
 import 'ui_provider.dart';
 
-/// Short labels for the Etch A Sketch board.
-String etchLabel(String name) {
-  final n = name.toLowerCase();
-  if (n.contains('southwest')) return 'Southwest';
-  if (n.contains('amazon')) return 'Amazon';
-  if (n.contains('quicksilver')) return 'Quicksilver';
-  if (n.contains('rent')) return 'Rent';
-  return name.length > 11 ? '${name.substring(0, 10)}…' : name;
-}
-
-/// Combines finance, upgrades, focus and UI state into one tree snapshot.
+/// Combines finance, looks, colony upkeep, focus and UI state into one
+/// tree snapshot.
 final dioramaSnapshotProvider = Provider<TreeSnapshot>((ref) {
   final settings = ref.watch(settingsProvider);
   final finance = ref.watch(financeProvider);
@@ -34,13 +26,16 @@ final dioramaSnapshotProvider = Provider<TreeSnapshot>((ref) {
   final treat = ref.watch(treatStatusProvider);
   final goals = ref.watch(goalsProvider);
   final rooms = ref.watch(roomsProvider);
-  final bills = ref.watch(billsProvider);
   final holdings = ref.watch(holdingsProvider);
   final ui = ref.watch(uiProvider);
-  final now = DateTime.now();
+  final colony = ref.watch(colonyProvider);
+  final expeditions = ref.watch(expeditionsProvider);
+  final bags = ref.watch(seedBagsProvider);
+  final now = ref.read(clockProvider)();
 
-  final preview = ui.previewMax;
-  bool on(DecorKey k) => preview || (decor[k]?.active ?? false);
+  bool on(DecorKey k) => decor[k]?.active ?? false;
+  final lit = colony.isLit(now);
+  final season = Dates.season(now);
 
   final ordered = [...goals.where((g) => g.priority), ...goals.where((g) => !g.priority)];
   final gains = <RoomKey, bool>{};
@@ -61,19 +56,17 @@ final dioramaSnapshotProvider = Provider<TreeSnapshot>((ref) {
 
   return TreeSnapshot(
     frost: finance.frost,
-    twilight: on(DecorKey.twilightSky),
-    fairyLights: on(DecorKey.fairyLights),
+    twilight: on(DecorKey.twilightSky) || !lit,
+    fairyLights: on(DecorKey.fairyLights) && lit,
     outfits: on(DecorKey.hats),
     beacon: on(DecorKey.lanternBeacon),
     seasonal: on(DecorKey.seasonalFoliage),
-    season: Dates.season(now),
+    season: season,
     treat: treat.level,
     acornPile: FinanceMath.acornPileCount(finance.freeCashCents),
     focusRunning: focus.running,
     focusProgress: focus.progress,
-    roomLevels: {
-      for (final r in RoomKey.values) r: preview ? RoomLevels.max : rooms.levelOf(r),
-    },
+    roomLevels: {for (final r in RoomKey.values) r: rooms.levelOf(r)},
     goals: [
       for (final g in ordered.take(3))
         GoalArt(level: g.roomLevel, percent: g.percent, priority: g.priority),
@@ -85,18 +78,29 @@ final dioramaSnapshotProvider = Provider<TreeSnapshot>((ref) {
     diyFraction: stats.diyPct / 100,
     hootHasGift: settings.hootGreetedOn != Dates.dayKey(now),
     paydayBurst: ui.paydayBurst,
-    etch: [
-      for (final b in bills.take(5)) EtchLine(etchLabel(b.name), b.daysUntilDue(now), b.paid),
-    ],
-    billCoverage: finance.upcomingBillsCents == 0
-        ? 1.4
-        : finance.freeCashCents / finance.upcomingBillsCents,
-    trophyCount: ref.watch(awardCountProvider) + (preview ? 30 : 0),
-    statueCount: ref.watch(trophiesProvider).length + (preview ? 4 : 0),
+    billPressure: finance.upcomingBillsCents == 0
+        ? 0
+        : (finance.freeCashCents <= 0 ? 2.0 : finance.upcomingBillsCents / finance.freeCashCents),
+    trophyCount: ref.watch(awardCountProvider),
+    statueCount: ref.watch(trophiesProvider).length,
     oakLevel: finance.oakLevel,
     homeStreak: ref.watch(groceryStatsProvider.select((g) => g.homeStreak)),
     metroRides: ref.watch(metroStatsProvider.select((m) => m.monthRides)),
-    pedestals: [for (final p in rooms.pedestals) p.split(':').first],
+    pedestals: [for (final p in rooms.pedestals.take(colony.pedestalCount)) p.split(':').first],
     pocketGains: gains,
+    lit: lit,
+    hearthFuel: colony.fuelFraction(now),
+    overdrive: colony.overdriveOn(now),
+    festival: colony.festivalOn(now),
+    rushHour: colony.rushHourOn(now),
+    winter: finance.frost || (on(DecorKey.seasonalFoliage) && season == Season.winter),
+    acornBubbles: colony.bubbles,
+    feederSeed: colony.seedIn(now),
+    feederFill: colony.feederFill(now),
+    lure: colony.lureOn(now),
+    perched: colony.perched(now),
+    squads: colony.squads(now),
+    expeditionsOut: expeditions.where((e) => e.active).length,
+    seedBags: bags.values.fold(0, (a, b) => a + b),
   );
 });

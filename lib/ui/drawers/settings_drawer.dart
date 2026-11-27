@@ -37,7 +37,10 @@ class SettingsDrawer extends ConsumerWidget {
         ),
         _Toggle(label: 'Sound effects', value: s.sfxOn, onChanged: (v) => notifier.update((x) => x.copyWith(sfxOn: v))),
         _Toggle(label: 'Haptics', value: s.hapticsOn, onChanged: (v) => notifier.update((x) => x.copyWith(hapticsOn: v))),
-        _Toggle(label: 'Ambient audio', value: s.ambientOn, onChanged: (v) => notifier.update((x) => x.copyWith(ambientOn: v))),
+        _Toggle(
+            label: 'Calm background piano (assets/audio/ambient_piano.wav)',
+            value: s.ambientOn,
+            onChanged: (v) => notifier.update((x) => x.copyWith(ambientOn: v))),
         _Toggle(
           label: 'Custom art blueprint (room drop-in slots)',
           value: blueprint,

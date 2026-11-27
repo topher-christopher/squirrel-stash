@@ -29,6 +29,22 @@ class LabArt extends RoomArt {
             Kit.fill(const [Color(0x9938BDF8), Color(0x9910B981), Color(0x99F59E0B), Color(0x99C084FC)][k]));
       }
     }
+    if (x.level >= 3) {
+      // Chalkboard of willpower formulas and a brass microscope
+      final board = Rect.fromLTWH(r.left + 84, r.top + 52, 54, 30);
+      c.drawRRect(Kit.rr(board.inflate(2), 2), Kit.fill(const Color(0xFF78350F)));
+      c.drawRect(board, Kit.fill(const Color(0xFF14532D)));
+      for (var k = 0; k < 4; k++) {
+        final y = board.top + 6 + k * 6.0;
+        c.drawPath(Path()..moveTo(board.left + 4, y)..quadraticBezierTo(board.left + 14, y - 3, board.left + 22 + k * 5, y),
+            Kit.stroke(const Color(0xCCF8FAFC), 0.7));
+      }
+      c.drawCircle(Offset(board.right - 10, board.top + 12), 5, Kit.stroke(const Color(0xCCFDE68A), 0.8));
+      final scope = Offset(r.left + 150, floor - 26);
+      c.drawLine(scope, scope.translate(4, -14), Kit.stroke(const Color(0xFFFBBF24), 2.4));
+      c.drawLine(scope.translate(-5, 0), scope.translate(5, 0), Kit.stroke(const Color(0xFF78350F), 2));
+      c.drawCircle(scope.translate(5, -16), 2, Kit.fill(const Color(0xFF94A3B8)));
+    }
   }
 
   @override
@@ -53,10 +69,21 @@ class LabArt extends RoomArt {
         c.drawCircle(base.translate(b * 2.0 - 1, -16 - ph * 10), 1.4 * (1 - ph), Kit.fill(Kit.a(color, 0.8)));
       }
     }
-    SquirrelPainter.paint(c, Offset(r.left + 146, floor - 14 + math.sin(x.t * 2.4) * 0.8),
+    SquirrelPainter.paint(c, Offset(r.left + 146, floor - 14 + math.sin(x.work * 2.4) * 0.8),
         dir: -1, scale: 0.92, time: x.t, seed: 0.7, pose: SquirrelPose.researcher,
         look: SquirrelLook(hat: x.snap.outfits ? SquirrelHat.goggles : SquirrelHat.none, scarf: x.frost),
         art: x.art);
+    if (x.level >= 3) {
+      // Lab assistant pacing with a clipboard, and glowing beakers
+      final u = Ease.pingPong(x.work / 5);
+      SquirrelPainter.paint(c, Offset(r.left + 70 + u * 30, floor - 14), dir: (x.work / 5) % 2 < 1 ? 1 : -1,
+          scale: 0.78, time: x.t, seed: 5.5, pose: SquirrelPose.researcher,
+          look: SquirrelLook(book: true, scarf: x.frost), art: x.art);
+      for (var k = 0; k < 4; k++) {
+        Kit.glow(c, Offset(r.left + 96 + k * 16.0, r.top + 34), 10, const [Color(0xFF38BDF8), Color(0xFF10B981),
+            Color(0xFFF59E0B), Color(0xFFC084FC)][k], 0.3 + 0.2 * math.sin(x.t * 2 + k));
+      }
+    }
   }
 
   void _silo(Canvas c, Rect tube, double t) {
@@ -86,12 +113,19 @@ class LabArt extends RoomArt {
 class GoalsArt extends RoomArt {
   const GoalsArt();
 
+  /// The hauler's ledge across the top of the alcove.
+  static double ledge(RoomCtx x) => x.r.top + 32;
+
   @override
   void paintStatic(Canvas c, RoomCtx x) {
     RoomKit.shell(c, x, earthy: true);
     final r = x.r;
-    if (x.level >= 2) {
-      c.drawRRect(Kit.rr(Rect.fromLTWH(r.left + 8, r.top + 8, r.width - 16, 6), 3), Kit.fill(const Color(0xFF6B3D1E)));
+    c.drawRRect(Kit.rr(Rect.fromLTWH(r.left + 8, ledge(x), r.width - 16, 5), 2), Kit.fill(const Color(0xFF6B3D1E)));
+    if (x.level >= 3) {
+      // Gold-trimmed wall sconces
+      for (final dx in const [10.0, 162.0]) {
+        c.drawRect(Rect.fromLTWH(r.left + dx - 2, r.top + 12, 4, 10), Kit.fill(const Color(0xFFFBBF24)));
+      }
     }
   }
 
@@ -111,11 +145,20 @@ class GoalsArt extends RoomArt {
         c.drawLine(center.translate(0, -17), center.translate(0, -7), Kit.stroke(const Color(0xFFD97706), 1.6));
       }
     }
-    // Hauler carrying a golden acorn back and forth from the lift
-    final u = Ease.pingPong(x.t / 5);
-    final dir = (x.t / 5) % 2 < 1 ? -1.0 : 1.0;
-    SquirrelPainter.paint(c, Offset(r.left + 20 + (1 - u) * (r.width - 40), r.top + 50),
-        dir: dir, scale: 0.75, time: x.t, seed: 1.9, hop: -math.sin(x.t * 8).abs() * 1.2,
+    if (x.level >= 3) {
+      for (final dx in const [10.0, 162.0]) {
+        final flick = 0.8 + 0.2 * math.sin(x.t * 9 + dx);
+        Kit.glow(c, Offset(r.left + dx, r.top + 10), 14, const Color(0xFFFB923C), 0.4 * flick);
+        c.drawOval(Kit.oval(Offset(r.left + dx, r.top + 9), 2, 3.4 * flick), Kit.fill(const Color(0xFFFDE047)));
+      }
+    } else if (x.level == 2) {
+      RoomKit.lamp(c, Offset(r.left + 86, r.top + 10), x.t, size: 0.8);
+    }
+    // Hauler carrying a golden acorn back and forth along the ledge
+    final u = Ease.pingPong(x.work / 5);
+    final dir = (x.work / 5) % 2 < 1 ? -1.0 : 1.0;
+    SquirrelPainter.paint(c, Offset(r.left + 20 + (1 - u) * (r.width - 40), ledge(x) - 10.5),
+        dir: dir, scale: 0.75, time: x.t, seed: 1.9, hop: -math.sin(x.work * 8).abs() * 1.2,
         look: SquirrelLook(acorn: dir < 0, golden: true, scarf: x.frost,
             hat: x.snap.outfits ? SquirrelHat.knight : SquirrelHat.none),
         art: x.art);

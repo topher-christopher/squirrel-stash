@@ -58,6 +58,24 @@ class TreasuryArt extends RoomArt {
         }
       }
     }
+    if (x.level >= 3) {
+      // Velvet curtains around the window and brass coin scales
+      for (final s in const [-1.0, 1.0]) {
+        c.drawPath(Path()
+          ..moveTo(40 + s * 16, 20)
+          ..quadraticBezierTo(40 + s * 24, 40, 40 + s * 15, 60)
+          ..lineTo(40 + s * 21, 60)
+          ..quadraticBezierTo(40 + s * 28, 40, 40 + s * 22, 20)
+          ..close(), Kit.fill(const Color(0xFF991B1B)));
+      }
+      c.drawLine(const Offset(18, 20), const Offset(62, 20), Kit.stroke(const Color(0xFFFBBF24), 1.6));
+      const scale = Offset(178, 52);
+      c.drawLine(scale, scale.translate(0, 20), Kit.stroke(Pal.brass, 1.4));
+      c.drawLine(scale.translate(-10, 2), scale.translate(10, 2), Kit.stroke(Pal.brass, 1.2));
+      for (final dx in const [-10.0, 10.0]) {
+        c.drawArc(Rect.fromCenter(center: scale.translate(dx, 8), width: 9, height: 6), 0, 3.14, false, Kit.stroke(Pal.brass, 1));
+      }
+    }
     c.restore();
   }
 
@@ -65,6 +83,17 @@ class TreasuryArt extends RoomArt {
   void paintLive(Canvas c, RoomCtx x) {
     final r = x.r;
     final floor = x.floorY;
+    if (x.level >= 3) {
+      // Acorn chandelier
+      final ch = Offset(r.left + 146, r.top + 14);
+      c.drawLine(Offset(ch.dx, r.top + 2), ch, Kit.stroke(const Color(0xFF451A03), 1));
+      c.drawLine(ch.translate(-12, 2), ch.translate(12, 2), Kit.stroke(Pal.brass, 1.4));
+      for (final dx in const [-12.0, 0.0, 12.0]) {
+        final p = ch.translate(dx, dx == 0 ? 6 : 1);
+        Kit.glow(c, p, 10, const Color(0xFFFDE68A), x.lit ? 0.45 : 0.1);
+        Kit.acorn(c, p, rx: 2.4, ry: 3, body: x.lit ? const Color(0xFFFDE68A) : Pal.acorn, strokeWidth: 0.5);
+      }
+    }
     _acornPile(c, Offset(r.left + 70, floor), x.snap.acornPile, x.t);
     _lantern(c, Offset(r.left + 98, r.top + 14), x.snap.treat, x.t);
     // Banker squirrel at the desk

@@ -4,6 +4,7 @@ import 'dart:ui';
 import '../../core/dates.dart';
 import '../art/paint_kit.dart';
 import '../art/palette.dart';
+import '../layout.dart';
 import 'diorama_layer.dart';
 
 /// The Great Oak's sunlit crown: swaying foliage clusters (seasonal when
@@ -70,9 +71,11 @@ class CanopyLayer extends DioramaLayer {
   void _limbs(Canvas c) {
     final bark = Kit.stroke(Pal.limbDark, 22);
     final barkLight = Kit.stroke(Pal.limb, 16);
+    // The two great branches (owl lantern left, bird feeder right) plus the
+    // two uprights holding up the Canopy Treasury.
     final limbs = [
-      (const Offset(200, 250), const Offset(150, 200), const Offset(40, 176)),
-      (const Offset(400, 250), const Offset(470, 190), const Offset(590, 156)),
+      TreeLayout.leftLimb,
+      TreeLayout.rightLimb,
       (const Offset(260, 246), const Offset(240, 170), const Offset(250, 90)),
       (const Offset(340, 246), const Offset(370, 170), const Offset(360, 90)),
     ];

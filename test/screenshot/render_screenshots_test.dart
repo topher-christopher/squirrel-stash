@@ -11,6 +11,7 @@ import 'package:squirrel_stash/app.dart';
 import 'package:squirrel_stash/database/seed_data.dart';
 import 'package:squirrel_stash/models/room.dart';
 import 'package:squirrel_stash/models/stash_snapshot.dart';
+import 'package:squirrel_stash/providers/rooms_provider.dart';
 import 'package:squirrel_stash/providers/ui_provider.dart';
 import 'package:squirrel_stash/ui/drawers/drawers.dart';
 
@@ -86,7 +87,7 @@ void main() {
   testWidgets('great oak panorama (1.0x, icons only)', (t) => shoot(t, '01_great_oak', demo));
 
   testWidgets('max unlocked preview', (t) => shoot(t, '02_max_unlocked', demo,
-      interact: (tester, context, c) async => c.read(uiProvider.notifier).togglePreviewMax()));
+      interact: (tester, context, c) async => c.read(roomsProvider.notifier).setAll(3)));
 
   testWidgets('frostline', (t) => shoot(t, '03_frost', demoWith({'checking_cents': '600000'})));
 
@@ -121,9 +122,58 @@ void main() {
         await tester.drag(find.text('Foraging & Willpower Lab'), const Offset(0, -600));
       }));
 
-  testWidgets('upgrades shop', (t) => shoot(t, '14_upgrades', demo,
+  testWidgets('colony shop', (t) => shoot(t, '14_colony_shop', demo,
       interact: (tester, context, c) async => unawaited(Drawers.upgrades(context))));
 
   testWidgets('settings drawer (backup & restore)', (t) => shoot(t, '16_settings_drawer', demo,
       interact: (tester, context, c) async => unawaited(Drawers.settings(context))));
+
+  // v1.2 colony
+  for (final (i, room) in const [
+    (17, RoomKey.birdFeeder),
+    (18, RoomKey.burrow),
+    (19, RoomKey.hearth),
+  ]) {
+    testWidgets('${room.name} drawer', (t) => shoot(t, '${i}_${room.name}_drawer', demo,
+        interact: (tester, context, c) async => unawaited(Drawers.room(context, room))));
+  }
+
+  testWidgets('bird feeder drawer scrolled to the logbook', (t) => shoot(t, '20_logbook', demo,
+      interact: (tester, context, c) async {
+        unawaited(Drawers.room(context, RoomKey.birdFeeder));
+        for (var i = 0; i < 30; i++) {
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+        await tester.drag(find.text('Canopy Bird Feeder'), const Offset(0, -600));
+        for (var i = 0; i < 30; i++) {
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+        await tester.scrollUntilVisible(find.textContaining('Keepsakes:'), 300,
+            scrollable: find.byType(Scrollable).last);
+      }));
+
+  final past = DateTime.now().subtract(const Duration(hours: 2)).toIso8601String();
+  testWidgets('hearth out: twilight dim, colony asleep', (t) => shoot(t, '21_hearth_dark', demoWith({'hearth_fuel_until': past})));
+
+  for (final (name, room) in const [
+    ('22_zoom_canopy', RoomKey.birdFeeder),
+    ('23_zoom_outfitter', RoomKey.outfitter),
+    ('24_zoom_burrow', RoomKey.burrow),
+    ('25_zoom_metro', RoomKey.metro),
+  ]) {
+    testWidgets(name, (t) => shoot(t, name, demo,
+        interact: (tester, context, c) async => c.read(uiProvider.notifier).focusCamera(room)));
+  }
+
+  testWidgets('bill vault low water', (t) => shoot(t, '26_vault_low_water', demoWith({'checking_cents': '1700000'}),
+      interact: (tester, context, c) async => c.read(uiProvider.notifier).focusCamera(RoomKey.billVault)));
+
+  testWidgets('bill vault mid water', (t) => shoot(t, '27_vault_mid_water', demoWith({'checking_cents': '1300000'}),
+      interact: (tester, context, c) async => c.read(uiProvider.notifier).focusCamera(RoomKey.billVault)));
+
+  testWidgets('max themes everywhere', (t) => shoot(t, '28_zoom_trunk_max', demo,
+      interact: (tester, context, c) async {
+        c.read(roomsProvider.notifier).setAll(3);
+        c.read(uiProvider.notifier).focusCamera(RoomKey.kitchen);
+      }));
 }

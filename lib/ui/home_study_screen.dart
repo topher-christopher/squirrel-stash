@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../core/haptics.dart';
+import '../providers/colony_actions.dart';
 import '../providers/settings_provider.dart';
 import '../providers/stash_actions.dart';
 import '../providers/ui_provider.dart';
@@ -26,16 +27,26 @@ class HomeStudyScreen extends ConsumerStatefulWidget {
 
 class _HomeStudyScreenState extends ConsumerState<HomeStudyScreen> {
   Timer? _stargazer;
+  Timer? _colonyClock;
+  AppLifecycleListener? _lifecycle;
 
   @override
   void initState() {
     super.initState();
-    // Ambient loop follows the persisted toggle + track.
+    // The optional background piano follows the persisted toggle (the audio
+    // service itself pauses it whenever the app leaves the foreground).
     ref.listenManual(
-      settingsProvider.select((s) => (s.ambientOn, s.ambientTrack)),
-      (_, next) => ref.read(audioServiceProvider).setAmbient(next.$1 ? next.$2 : null),
+      settingsProvider.select((s) => s.ambientOn),
+      (_, on) => ref.read(audioServiceProvider).setAmbient(on),
       fireImmediately: true,
     );
+    // Colony clock: settle Hearth fuel, wild acorns, feeder visits and
+    // returning squads now, every 20s, and whenever the app comes back.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(colonyActionsProvider).tick();
+    });
+    _colonyClock = Timer.periodic(const Duration(seconds: 20), (_) => ref.read(colonyActionsProvider).tick());
+    _lifecycle = AppLifecycleListener(onResume: () => ref.read(colonyActionsProvider).tick());
     ref.listenManual(
       settingsProvider.select((s) => s.hapticsOn),
       (_, on) => Haptics.enabled = on,
@@ -58,6 +69,8 @@ class _HomeStudyScreenState extends ConsumerState<HomeStudyScreen> {
   @override
   void dispose() {
     _stargazer?.cancel();
+    _colonyClock?.cancel();
+    _lifecycle?.dispose();
     super.dispose();
   }
 

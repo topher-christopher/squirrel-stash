@@ -1,19 +1,17 @@
-/// Grand Tree upgrades, bought with Acorns + Golden Acorns. Strictly
-/// cosmetic currency — never mixed with real USD.
+/// Grand Tree looks. Free to switch on and off since v1.2 — Acorns now pay
+/// for upkeep and expeditions instead of one-time unlocks.
 enum DecorKey {
   lanternBeacon('Treat Lantern Beacon',
-      'Projects the Green / Yellow / Red Treat lantern onto the canopy birdhouse', 400, 1),
-  fairyLights('Canopy Fairy Lights', 'Twinkling garlands strung between the branches', 250, 0),
-  twilightSky('Twilight Firefly Sky', 'Starry dusk sky with drifting fireflies', 500, 1),
-  seasonalFoliage('Seasonal Foliage', 'The crown follows the real seasons — blossoms to snowy boughs', 600, 2),
-  hats('Colony Outfits', 'Knight helms, beanies, aviator goggles & banker visors for everyone', 350, 1);
+      'Projects the Green / Yellow / Red Treat lantern onto the Owl Moonlight Lantern'),
+  fairyLights('Canopy Fairy Lights', 'Twinkling garlands along the branches (lit while the Hearth burns)'),
+  twilightSky('Twilight Firefly Sky', 'Starry dusk sky with drifting fireflies, all day long'),
+  seasonalFoliage('Seasonal Foliage', 'The crown follows the real seasons — blossoms to snowy boughs'),
+  hats('Colony Outfits', 'Knight helms, beanies, goggles, visors & DJ headphones for everyone');
 
-  const DecorKey(this.label, this.blurb, this.acornCost, this.goldenCost);
+  const DecorKey(this.label, this.blurb);
 
   final String label;
   final String blurb;
-  final int acornCost;
-  final int goldenCost;
 
   static DecorKey? tryParse(String? raw) {
     for (final k in values) {
@@ -23,11 +21,12 @@ enum DecorKey {
   }
 }
 
-/// Ownership is permanent; [enabled] toggles whether the upgrade is shown.
+/// [enabled] toggles whether the look is shown. [owned] is kept for the
+/// schema (every look is owned since v1.2).
 class DecorItemState {
   const DecorItemState({
     required this.key,
-    this.owned = false,
+    this.owned = true,
     this.enabled = false,
   });
 
@@ -35,7 +34,7 @@ class DecorItemState {
   final bool owned;
   final bool enabled;
 
-  bool get active => owned && enabled;
+  bool get active => enabled;
 
   DecorItemState copyWith({bool? owned, bool? enabled}) => DecorItemState(
         key: key,
@@ -54,7 +53,7 @@ class DecorItemState {
     if (key == null) return null;
     return DecorItemState(
       key: key,
-      owned: (m['owned'] as num? ?? 0) == 1,
+      owned: (m['owned'] as num? ?? 1) == 1,
       enabled: (m['enabled'] as num? ?? 0) == 1,
     );
   }

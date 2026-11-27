@@ -19,7 +19,11 @@ class RoomCtx {
     required this.detail,
     required this.snap,
     required this.art,
-  });
+    double? work,
+    this.since = _never,
+  }) : work = work ?? t;
+
+  static double _never(String _) => 1e9;
 
   final RoomKey room;
   final Rect r;
@@ -33,7 +37,16 @@ class RoomCtx {
   final TreeSnapshot snap;
   final StashAssetManifest art;
 
+  /// Colony work clock: advances only while the Hearth is lit, so squirrel
+  /// routines freeze (asleep) in the dark. Use [t] for water and flames.
+  final double work;
+
+  /// Seconds since a one-shot story beat (see `StashDioramaGame.since`).
+  final double Function(String key) since;
+
   bool get frost => snap.frost;
+  bool get lit => snap.lit;
+  bool get max => level >= 3;
 
   /// Local point inside the room from fractions of its width/height.
   Offset at(double fx, double fy) => Offset(r.left + r.width * fx, r.top + r.height * fy);
@@ -156,6 +169,8 @@ abstract final class RoomKit {
   /// Subtle on purpose: it reads when zoomed in, recedes when zoomed out.
   static void carvedName(Canvas c, RoomCtx x) {
     final r = x.r;
+    // Outdoor spots paint their own little signs.
+    if (x.room == RoomKey.birdFeeder || x.room == RoomKey.burrow) return;
     if (x.room == RoomKey.metro) {
       final text = _text(x.room.title.toUpperCase(), 7.5, const Color(0xEEF5F5F4), spacing: 1.4);
       final plate = Rect.fromCenter(
@@ -174,6 +189,10 @@ abstract final class RoomKit {
     glint.paint(c, at.translate(0, 0.7));
     ink.paint(c, at);
   }
+
+  /// Shared text painter (cached by callers that draw every frame).
+  static TextPainter text(String text, double size, Color color, {double spacing = 0.6}) =>
+      _text(text, size, color, spacing: spacing);
 
   static TextPainter _text(String text, double size, Color color, {double spacing = 0.6}) => TextPainter(
         text: TextSpan(

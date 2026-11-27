@@ -4,9 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../models/focus_state.dart';
-import '../../models/ambient_track.dart';
 import '../../providers/focus_provider.dart';
 import '../../providers/settings_provider.dart';
+import '../../providers/ui_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../widgets/stash_controls.dart';
@@ -40,7 +40,7 @@ class _FocusDrawerState extends ConsumerState<FocusDrawer> {
     return DrawerShell(
       emoji: '⏳',
       title: 'Focus Shift Study Companion',
-      subtitle: 'Work alongside the colony to earn Acorns for room upgrades',
+      subtitle: 'Work alongside the colony to earn Acorns for Hearth fuel and expeditions',
       children: [
         StashCard(
           border: AppColors.amber.withValues(alpha: 0.35),
@@ -93,22 +93,21 @@ class _FocusDrawerState extends ConsumerState<FocusDrawer> {
                   borderRadius: BorderRadius.circular(22),
                   border: Border.all(color: settings.ambientOn ? AppColors.emeraldBright : const Color(0xFF57534E)),
                 ),
-                child: Text(
-                  settings.ambientOn
-                      ? '🔊 ${settings.ambientTrack.label}: ON'
-                      : '🔈 ${settings.ambientTrack.label}: OFF',
-                  style: AppType.body(13, weight: FontWeight.w800,
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(settings.ambientOn ? Icons.piano_rounded : Icons.piano_off_rounded, size: 16,
                       color: settings.ambientOn ? AppColors.emeraldSoft : AppColors.honey),
-                ),
+                  const SizedBox(width: 6),
+                  Text(settings.ambientOn ? 'Calm piano: ON' : 'Calm piano: OFF',
+                      style: AppType.body(13, weight: FontWeight.w800,
+                          color: settings.ambientOn ? AppColors.emeraldSoft : AppColors.honey)),
+                ]),
               ),
             ),
-            const SizedBox(height: 10),
-            ChoicePills<AmbientTrack>(
-              values: AmbientTrack.values,
-              selected: settings.ambientTrack,
-              label: (t) => '${t.emoji} ${t.label}',
-              onSelected: (t) => settingsNotifier.update((s) => s.copyWith(ambientTrack: t)),
-            ),
+            if (ref.watch(ambientPianoAvailableProvider).value == false) ...[
+              const SizedBox(height: 8),
+              Text('Silent until you drop a loop at assets/audio/ambient_piano.wav and rebuild.',
+                  textAlign: TextAlign.center, style: AppType.body(11, color: AppColors.stoneDim, height: 1.3)),
+            ],
           ]),
         ),
         const SizedBox(height: 12),
@@ -120,7 +119,7 @@ class _FocusDrawerState extends ConsumerState<FocusDrawer> {
             const SizedBox(width: 10),
             Expanded(
               child: Text('A 25-minute shift earns about ${(25 * 2 * settings.hearthMultiplier).round()} Acorns '
-                  '(minutes × 2 × hearth). ${settings.focusShiftsCompleted} shifts completed so far.',
+                  '(minutes × 2 × warmth). ${settings.focusShiftsCompleted} shifts completed so far.',
                   style: AppType.body(12, color: AppColors.stone, height: 1.35)),
             ),
           ]),
@@ -213,7 +212,7 @@ class _HearthRow extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Warm Hearth • $label', style: AppType.title(14.5, color: const Color(0xFFFDBA74))),
+              Text('Focus Warmth • $label', style: AppType.title(14.5, color: const Color(0xFFFDBA74))),
               Text('Grows with every Focus Shift & willpower win. It never cools down.',
                   style: AppType.body(11.5, color: AppColors.stone)),
             ]),

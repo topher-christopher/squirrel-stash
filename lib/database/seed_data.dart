@@ -9,6 +9,7 @@ import '../models/stash_snapshot.dart';
 import '../models/trophy.dart';
 import '../providers/economy.dart';
 import '../providers/feat_engine.dart';
+import 'seed_colony.dart';
 import 'seed_history.dart';
 
 /// The demo Great Oak (dates relative to install day) plus an empty
@@ -96,10 +97,12 @@ abstract final class SeedData {
           focusShiftsCompleted: 12,
           focusMinutesTotal: 340,
         ).toMap(),
+        ...SeedColony.settings(now),
         'room_lv_outfitter': '2',
         'room_lv_trophyHall': '3',
         'room_lv_kitchen': '2',
         'room_lv_treasury': '2',
+        'room_lv_birdFeeder': '2',
         'pedestals': 'statue:t1,feat:iron_shield,trinket:penny_gong,trinket:card_wall',
       },
       bills: bills,
@@ -119,15 +122,18 @@ abstract final class SeedData {
       logs: logs,
       holdings: _demoHoldings(today),
       decor: const [
-        DecorItemState(key: DecorKey.lanternBeacon, owned: true, enabled: true),
-        DecorItemState(key: DecorKey.fairyLights, owned: true, enabled: true),
+        DecorItemState(key: DecorKey.lanternBeacon, enabled: true),
+        DecorItemState(key: DecorKey.fairyLights, enabled: true),
         DecorItemState(key: DecorKey.twilightSky),
         DecorItemState(key: DecorKey.seasonalFoliage),
-        DecorItemState(key: DecorKey.hats, owned: true, enabled: true),
+        DecorItemState(key: DecorKey.hats, enabled: true),
       ],
       groceries: groceries,
       rides: rides,
       awards: awards,
+      expeditions: SeedColony.expeditions(now),
+      seedBags: SeedColony.seedBags,
+      birdLog: SeedColony.birdLog(now),
     );
   }
 
@@ -175,9 +181,12 @@ abstract final class SeedData {
       ];
 
   /// A clean hollow: zero balances, default habits, the bill presets with
-  /// empty amounts, and a few starter Acorns.
+  /// empty amounts, a few starter Acorns and a warm Hearth.
   static StashSnapshot fresh([DateTime? now]) => StashSnapshot(
-        settings: const AppSettings(acorns: 100).toMap(),
+        settings: {
+          ...const AppSettings(acorns: 100).toMap(),
+          ...SeedColony.freshSettings(now ?? DateTime.now()),
+        },
         bills: presetBills(now ?? DateTime.now(), withAmounts: false),
         habits: defaultHabits,
         decor: [for (final k in DecorKey.values) DecorItemState(key: k)],

@@ -3,6 +3,8 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../game/layout.dart';
 import '../../models/room.dart';
+import '../../providers/colony_actions.dart';
+import '../../providers/colony_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/stash_actions.dart';
 import '../../providers/ui_provider.dart';
@@ -23,6 +25,7 @@ class RoomHotspots extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final zen = ref.watch(settingsProvider.select((s) => s.zenMode));
+    final bubbles = ref.watch(colonyProvider.select((c) => c.bubbles));
     return ZenFade(
       zen: zen,
       child: Stack(clipBehavior: Clip.none, children: [
@@ -30,6 +33,14 @@ class RoomHotspots extends ConsumerWidget {
           Positioned.fromRect(
             rect: TreeLayout.room(room),
             child: TapZone(label: room.title, room: room, onTap: () => onRoomTap(room)),
+          ),
+        if (bubbles > 0)
+          Positioned.fromRect(
+            rect: TreeLayout.bubbleHotspot,
+            child: TapZone(
+              label: 'Harvest wild acorns',
+              onTap: () => ref.read(colonyActionsProvider).harvestBubbles(),
+            ),
           ),
         Positioned.fromRect(
           rect: TreeLayout.hootHotspot,

@@ -14,7 +14,7 @@ import '../../theme/app_typography.dart';
 import '../widgets/animated_money.dart';
 import '../widgets/room_icons.dart';
 import '../widgets/stash_controls.dart';
-import 'decor_shop.dart';
+import 'colony_cards.dart';
 import 'drawer_shell.dart';
 import 'holding_editor.dart';
 
@@ -100,7 +100,7 @@ class _ReserveBodyState extends ConsumerState<ReserveBody> {
       ],
       PillButton(label: '+ Add holding', expand: true, outlined: true, color: accent,
           onPressed: () => editHoldingDialog(context, ref, kind)),
-      RoomUpgradeCard(room: room),
+      RoomThemeCard(room: room),
     ]);
   }
 

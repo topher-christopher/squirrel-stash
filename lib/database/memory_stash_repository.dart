@@ -1,5 +1,7 @@
 import '../models/bill.dart';
+import '../models/bird.dart';
 import '../models/decor.dart';
+import '../models/expedition.dart';
 import '../models/feat.dart';
 import '../models/goal.dart';
 import '../models/grocery_trip.dart';
@@ -30,6 +32,9 @@ class MemoryStashRepository implements StashRepository {
   final Map<String, GroceryTrip> groceries = {};
   final Map<String, MetroRide> rides = {};
   final Map<String, FeatAward> awards = {};
+  final Map<String, Expedition> expeditions = {};
+  final Map<SeedKind, int> seedBags = {};
+  final Map<BirdSpecies, BirdLogEntry> birdLog = {};
 
   static void _fill<K, V>(Map<K, V> target, Iterable<V> items, K Function(V) key) {
     target
@@ -52,6 +57,11 @@ class MemoryStashRepository implements StashRepository {
     _fill(groceries, s.groceries, (g) => g.id);
     _fill(rides, s.rides, (r) => r.id);
     _fill(awards, s.awards, (a) => a.uniqueKey);
+    _fill(expeditions, s.expeditions, (e) => e.id);
+    seedBags
+      ..clear()
+      ..addAll(s.seedBags);
+    _fill(birdLog, s.birdLog, (b) => b.species);
   }
 
   @override
@@ -68,6 +78,9 @@ class MemoryStashRepository implements StashRepository {
         groceries: groceries.values.toList()..sort((a, b) => b.tripAt.compareTo(a.tripAt)),
         rides: rides.values.toList()..sort((a, b) => b.rideAt.compareTo(a.rideAt)),
         awards: awards.values.toList()..sort((a, b) => a.awardedAt.compareTo(b.awardedAt)),
+        expeditions: expeditions.values.toList()..sort((a, b) => a.startedAt.compareTo(b.startedAt)),
+        seedBags: Map.of(seedBags),
+        birdLog: birdLog.values.toList(),
       );
 
   @override
@@ -148,6 +161,19 @@ class MemoryStashRepository implements StashRepository {
   Future<void> upsertAwards(List<FeatAward> items) async {
     for (final a in items) {
       awards[a.uniqueKey] = a;
+    }
+  }
+
+  @override
+  Future<void> upsertExpedition(Expedition expedition) async => expeditions[expedition.id] = expedition;
+
+  @override
+  Future<void> putSeedBags(SeedKind seed, int bags) async => seedBags[seed] = bags;
+
+  @override
+  Future<void> upsertBirdLog(List<BirdLogEntry> entries) async {
+    for (final e in entries) {
+      birdLog[e.species] = e;
     }
   }
 

@@ -6,6 +6,7 @@ import 'package:squirrel_stash/database/backup_codec.dart';
 import 'package:squirrel_stash/database/schema.dart';
 import 'package:squirrel_stash/database/seed_data.dart';
 import 'package:squirrel_stash/database/sqlite_stash_repository.dart';
+import 'package:squirrel_stash/models/bird.dart';
 import 'package:squirrel_stash/models/holding.dart';
 import 'package:squirrel_stash/models/stash_snapshot.dart';
 import 'package:squirrel_stash/providers/repository_providers.dart';
@@ -28,6 +29,10 @@ void expectSameStash(StashSnapshot actual, StashSnapshot expected) {
   expect(rows(actual.groceries, (e) => e.toMap()), rows(expected.groceries, (e) => e.toMap()));
   expect(rows(actual.rides, (e) => e.toMap()), rows(expected.rides, (e) => e.toMap()));
   expect(rows(actual.awards, (e) => e.toMap()), rows(expected.awards, (e) => e.toMap()));
+  expect(rows(actual.expeditions, (e) => e.toMap()), rows(expected.expeditions, (e) => e.toMap()));
+  expect(actual.seedBags, expected.seedBags);
+  int bySpecies(Map<String, Object?> a, Map<String, Object?> b) => '${a['species']}'.compareTo('${b['species']}');
+  expect(rows(actual.birdLog, (e) => e.toMap())..sort(bySpecies), rows(expected.birdLog, (e) => e.toMap())..sort(bySpecies));
 }
 
 void main() {
@@ -122,6 +127,41 @@ void main() {
       expect(saved.logs, hasLength(backup.snapshot.logs.length));
       expect(saved.statements, hasLength(backup.snapshot.statements.length));
       expect(saved.settings, backup.snapshot.settings);
+    });
+
+    test('the colony (expeditions, seed bags, logbook) round-trips', () {
+      final original = stash();
+      final restored = roundTrip(original).snapshot;
+      expect(restored.expeditions.map((e) => (e.id, e.route, e.collected)),
+          original.expeditions.map((e) => (e.id, e.route, e.collected)));
+      expect(restored.seedBags, original.seedBags);
+      final chickadee = restored.birdLog.firstWhere((b) => b.species == BirdSpecies.chickadee);
+      expect((chickadee.visits, chickadee.keepsakeUnlocked, chickadee.favoriteLure), (104, true, null));
+    });
+
+    test('a v2 backup upgrades: looks owned, Granary grandfathered, new tables empty', () {
+      final json = jsonDecode(BackupCodec.encode(stash(), exportedAt: now)) as Map<String, Object?>;
+      json['schemaVersion'] = 2;
+      final tables = json['tables']! as Map<String, Object?>;
+      tables
+        ..remove('expeditions')
+        ..remove('seedBags')
+        ..remove('birdLog');
+      final settings = tables['settings']! as Map<String, Object?>;
+      settings
+        ..remove('granary_level')
+        ..['acorns'] = '7000'
+        ..['ambient_track'] = 'campfire';
+      for (final row in tables['decor']! as List) {
+        (row as Map<String, Object?>)['owned'] = 0;
+      }
+      final restored = BackupCodec.decode(jsonEncode(json));
+      expect(restored.schemaVersion, 2);
+      expect(restored.snapshot.decor.every((d) => d.owned), isTrue);
+      expect(restored.snapshot.settings['granary_level'], '3');
+      expect(restored.snapshot.settings.containsKey('ambient_track'), isFalse);
+      expect(restored.snapshot.expeditions, isEmpty);
+      expect(restored.snapshot.birdLog, isEmpty);
     });
 
     test('the file name and summary read naturally', () {

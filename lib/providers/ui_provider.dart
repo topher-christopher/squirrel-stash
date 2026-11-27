@@ -25,7 +25,6 @@ class CameraRequest {
 class UiState {
   const UiState({
     this.blueprint = false,
-    this.previewMax = false,
     this.banner,
     this.labReaction,
     this.labReactionId = 0,
@@ -35,9 +34,6 @@ class UiState {
   });
 
   final bool blueprint;
-
-  /// Room Preview Switch: render every room at Max Unlocked.
-  final bool previewMax;
   final BannerMessage? banner;
   final String? labReaction;
   final int labReactionId;
@@ -49,7 +45,6 @@ class UiState {
 
   UiState copyWith({
     bool? blueprint,
-    bool? previewMax,
     BannerMessage? Function()? banner,
     String? Function()? labReaction,
     int? labReactionId,
@@ -59,7 +54,6 @@ class UiState {
   }) =>
       UiState(
         blueprint: blueprint ?? this.blueprint,
-        previewMax: previewMax ?? this.previewMax,
         banner: banner != null ? banner() : this.banner,
         labReaction: labReaction != null ? labReaction() : this.labReaction,
         labReactionId: labReactionId ?? this.labReactionId,
@@ -119,8 +113,6 @@ class UiNotifier extends Notifier<UiState> {
 
   void toggleBlueprint() => state = state.copyWith(blueprint: !state.blueprint);
 
-  void togglePreviewMax() => state = state.copyWith(previewMax: !state.previewMax);
-
   /// Records a room visit; returns true the first time every room was seen.
   bool visitRoom(RoomKey room) {
     if (state.visitedRooms.contains(room)) return false;
@@ -152,6 +144,9 @@ final dioramaEventsProvider = Provider<DioramaEventBus>((ref) {
   ref.onDispose(bus.close);
   return bus;
 });
+
+/// Whether the optional background piano file was bundled.
+final ambientPianoAvailableProvider = FutureProvider<bool>((ref) => AmbientPiano.isAvailable());
 
 /// Overridden with [SilentAudioService] in tests.
 final audioServiceProvider = Provider<AudioService>((ref) {

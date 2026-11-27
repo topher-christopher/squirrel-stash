@@ -32,10 +32,15 @@ class SettingsNotifier extends Notifier<AppSettings> {
   void setChecking(int cents) =>
       update((s) => s.copyWith(checkingCents: cents < 0 ? 0 : cents));
 
-  void addAcorns(int delta) => update((s) {
-        final next = s.acorns + delta;
-        return s.copyWith(acorns: next < 0 ? 0 : next);
-      });
+  /// Earns (or refunds, when negative) Acorns through the Granary cap.
+  void addAcorns(int delta) => update((s) => s.withAcorns(delta));
+
+  /// Spends Acorns and/or Golden Acorns if there are enough of both.
+  bool trySpend({int acorns = 0, int golden = 0}) {
+    if (state.acorns < acorns || state.goldenAcorns < golden) return false;
+    update((s) => s.spendAcorns(acorns).copyWith(goldenAcorns: s.goldenAcorns - golden));
+    return true;
+  }
 
   void addGolden(int delta) => update((s) {
         final next = s.goldenAcorns + delta;

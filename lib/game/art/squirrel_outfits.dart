@@ -3,9 +3,11 @@ import 'dart:ui';
 
 import 'paint_kit.dart';
 import 'palette.dart';
+import 'squirrel_gear.dart';
+import 'squirrel_painter.dart' show SquirrelPose;
 
 /// Headwear for the colony (Acorn Outfitter wardrobe).
-enum SquirrelHat { none, chef, scholar, knight, beanie, goggles, visor }
+enum SquirrelHat { none, chef, scholar, knight, beanie, goggles, visor, headphones, capsBeanie }
 
 /// Things a squirrel carries.
 enum SquirrelProp { none, briefcase, duster, ladle, pickaxe }
@@ -17,6 +19,10 @@ abstract final class SquirrelOutfits {
     switch (hat) {
       case SquirrelHat.none:
         return;
+      case SquirrelHat.headphones:
+        SquirrelGear.headphones(c);
+      case SquirrelHat.capsBeanie:
+        SquirrelGear.capsBeanie(c);
       case SquirrelHat.chef:
         c.save();
         c.translate(1, -16);
@@ -161,6 +167,57 @@ abstract final class SquirrelOutfits {
             Kit.stroke(const Color(0xFF94A3B8), 1.6));
         c.restore();
         c.drawOval(Kit.oval(const Offset(6, 1), 2, 1.6), paw);
+    }
+  }
+
+  /// What a pose holds: tea cup, tossed acorn, lantern, book & monocle paw.
+  static void poseProp(Canvas canvas, SquirrelPose pose, bool book, double time, double seed, Paint paw) {
+    switch (pose) {
+      case SquirrelPose.tea:
+        canvas.save();
+        canvas.translate(8, 3);
+        canvas.drawRRect(Kit.rr(const Rect.fromLTWH(-3, -3, 6, 6.5), 1.5),
+            Kit.fill(const Color(0xFFF8FAFC)));
+        canvas.drawRRect(Kit.rr(const Rect.fromLTWH(-3, -3, 6, 6.5), 1.5),
+            Kit.stroke(Pal.acornCap, 1));
+        final s = (time * 0.42 + seed) % 1.0;
+        final steam = Path()
+          ..moveTo(0, -5 - s * 3)
+          ..quadraticBezierTo(2, -8 - s * 3, 0, -11 - s * 3);
+        canvas.drawPath(steam,
+            Kit.stroke(Color.fromRGBO(255, 255, 255, 0.85 * math.sin(s * math.pi)), 1.1));
+        canvas.restore();
+        canvas.drawOval(Kit.oval(const Offset(5.6, 4.2), 2.1, 1.6), paw);
+      case SquirrelPose.toss:
+        final arc = (math.sin(time * 2.4 + seed)).abs();
+        Kit.acorn(canvas, Offset(8, -10 - arc * 9), rx: 3.4, ry: 4.2, strokeWidth: 0.8);
+        canvas.drawOval(Kit.oval(const Offset(6.8, -1.5), 2, 1.6), paw);
+      case SquirrelPose.lantern:
+        canvas.save();
+        canvas.translate(10, 2);
+        final flicker = 0.3 + 0.08 * math.sin(time * 9 + seed);
+        Kit.glow(canvas, const Offset(0, 3), 11, const Color(0xFFFEF08A), flicker + 0.2);
+        canvas.drawRRect(Kit.rr(const Rect.fromLTWH(-2.5, 0, 5, 6), 1.2),
+            Kit.fill(const Color(0xFFFACC15)));
+        canvas.drawRRect(Kit.rr(const Rect.fromLTWH(-2.5, 0, 5, 6), 1.2),
+            Kit.stroke(Pal.acornCap, 0.9));
+        canvas.drawLine(const Offset(0, 0), const Offset(-2, -3), Kit.stroke(Pal.acornCap, 0.8));
+        canvas.restore();
+      case SquirrelPose.focus:
+      case SquirrelPose.researcher:
+        if (book) {
+          canvas.drawRRect(Kit.rr(const Rect.fromLTWH(4, 1, 9, 6), 1),
+              Kit.fill(const Color(0xFF7C2D12)));
+          canvas.drawRect(const Rect.fromLTWH(5, 1.6, 7, 4.8),
+              Kit.fill(const Color(0xFFFEF3C7)));
+          canvas.drawLine(const Offset(8.5, 1.6), const Offset(8.5, 6.4),
+              Kit.stroke(Pal.acornCap, 0.6));
+        }
+        canvas.drawOval(Kit.oval(const Offset(6, 4), 2, 1.6), paw);
+      case SquirrelPose.idle:
+      case SquirrelPose.sleep:
+      case SquirrelPose.hauler:
+        break;
     }
   }
 }

@@ -12,7 +12,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../widgets/animated_money.dart';
 import '../widgets/stash_controls.dart';
-import 'decor_shop.dart';
+import 'colony_cards.dart';
 import 'drawer_shell.dart';
 
 /// Squirrel Kitchen: neutral grocery-spend awareness plus the Home-Cooked
@@ -98,7 +98,7 @@ class KitchenBody extends ConsumerWidget {
             ),
           ),
       ],
-      const RoomUpgradeCard(room: RoomKey.kitchen),
+      const RoomThemeCard(room: RoomKey.kitchen),
     ]);
   }
 }

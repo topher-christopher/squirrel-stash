@@ -6,7 +6,7 @@ import 'package:sqflite/sqflite.dart';
 /// To evolve the schema: bump [version] and add the new statements under
 /// that version number in [migrations]. Never edit shipped statements.
 abstract final class Schema {
-  static const version = 2;
+  static const version = 3;
 
   static const settings = 'settings';
   static const bills = 'bills';
@@ -22,6 +22,9 @@ abstract final class Schema {
   static const groceries = 'grocery_trips';
   static const rides = 'metro_rides';
   static const awards = 'trophy_awards';
+  static const expeditions = 'expeditions';
+  static const seedBags = 'seed_bags';
+  static const birdLog = 'bird_log';
 
   static const allTables = [
     settings,
@@ -36,6 +39,9 @@ abstract final class Schema {
     groceries,
     rides,
     awards,
+    expeditions,
+    seedBags,
+    birdLog,
   ];
 
   static const _v1 = <String>[
@@ -171,8 +177,42 @@ abstract final class Schema {
         "'brokerage_apy_bps')",
   ];
 
+  /// v1.2: Acorn upkeep economy, Scavenger Burrow expeditions, seed bags and
+  /// the Lifetime Bird & Critter Logbook.
+  static const _v3 = <String>[
+    'CREATE TABLE expeditions ('
+        'id TEXT PRIMARY KEY, '
+        'route TEXT NOT NULL, '
+        'started_at TEXT NOT NULL, '
+        'ends_at TEXT NOT NULL, '
+        'acorns INTEGER NOT NULL DEFAULT 0, '
+        'collected_at TEXT)',
+    'CREATE INDEX idx_expeditions_ends ON expeditions(ends_at)',
+    'CREATE TABLE seed_bags ('
+        'seed TEXT PRIMARY KEY, '
+        'bags INTEGER NOT NULL DEFAULT 0)',
+    'CREATE TABLE bird_log ('
+        'species TEXT PRIMARY KEY, '
+        'visits INTEGER NOT NULL DEFAULT 0, '
+        'first_seen TEXT NOT NULL, '
+        'last_seen TEXT NOT NULL, '
+        "lure_tally TEXT NOT NULL DEFAULT '')",
+    // One-time cosmetic paywalls are gone: every Grand Tree look is owned.
+    'UPDATE decor SET owned = 1',
+    // Grandfather the Granary: start at the level the current balance needs.
+    'INSERT OR IGNORE INTO settings (key, value) '
+        "SELECT 'granary_level', CASE "
+        "WHEN CAST(value AS INTEGER) <= 2500 THEN '1' "
+        "WHEN CAST(value AS INTEGER) <= 5000 THEN '2' "
+        "WHEN CAST(value AS INTEGER) <= 10000 THEN '3' "
+        "WHEN CAST(value AS INTEGER) <= 25000 THEN '4' "
+        "ELSE '5' END FROM settings WHERE key = 'acorns'",
+    // The campfire / forest-breeze track picker was retired.
+    "DELETE FROM settings WHERE key = 'ambient_track'",
+  ];
+
   /// Statements to run when upgrading *to* the keyed version.
-  static const Map<int, List<String>> migrations = {2: _v2};
+  static const Map<int, List<String>> migrations = {2: _v2, 3: _v3};
 
   static Future<void> create(Database db, int version) async {
     final batch = db.batch();

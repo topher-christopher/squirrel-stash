@@ -1,4 +1,6 @@
-import 'ambient_track.dart';
+import 'dart:math' as math;
+
+import 'colony_economy.dart';
 
 /// Scalar app state persisted in the `settings` key-value table.
 /// Checking balance, the Acorn economy and Warm Hearth live here because
@@ -7,6 +9,8 @@ class AppSettings {
   const AppSettings({
     this.checkingCents = 0,
     this.acorns = 0,
+    this.acornsOverflow = 0,
+    this.granaryLevel = 1,
     this.goldenAcorns = 0,
     this.goldenSavingsMilestones = 0,
     this.hearthWarmth = 1,
@@ -19,15 +23,24 @@ class AppSettings {
     this.focusShiftsCompleted = 0,
     this.focusMinutesTotal = 0,
     this.ambientOn = false,
-    this.ambientTrack = AmbientTrack.campfire,
     this.sfxOn = true,
     this.hapticsOn = true,
   });
 
   final int checkingCents;
 
-  /// Everyday cosmetic currency: 10 per $1 of willpower saved + Focus Shifts.
+  /// Everyday cosmetic currency in the Granary: 10 per $1 of willpower saved
+  /// + Focus Shifts + wild canopy bubbles. Never above [granaryCap] once
+  /// new Acorns arrive; the rest wait in [acornsOverflow].
   final int acorns;
+
+  /// Acorns waiting outside a full Granary. They flow in automatically as
+  /// soon as there's room (after spending or a storage upgrade), so nothing
+  /// earned is ever lost.
+  final int acornsOverflow;
+
+  /// Granary storage level (Golden Acorn upgrades raise the cap).
+  final int granaryLevel;
 
   /// Rare cosmetic currency: 1 per $100 cumulative willpower savings, 1 per
   /// reclaimed goal, plus seasonal and ladder milestones. Never real USD.
@@ -55,10 +68,38 @@ class AppSettings {
   final String focusIntention;
   final int focusShiftsCompleted;
   final int focusMinutesTotal;
+  /// Optional calm background piano (silent without ambient_piano.wav).
   final bool ambientOn;
-  final AmbientTrack ambientTrack;
   final bool sfxOn;
   final bool hapticsOn;
+
+  int get granaryCap => ColonyEconomy.granaryCap(granaryLevel);
+
+  /// Adds (or, when negative, takes back) Acorns through the Granary cap:
+  /// gains beyond the cap wait in the overflow; refunds come out of the
+  /// overflow first.
+  AppSettings withAcorns(int delta) {
+    if (delta >= 0) {
+      final room = math.max(0, granaryCap - acorns);
+      final into = math.min(delta, room);
+      return copyWith(acorns: acorns + into, acornsOverflow: acornsOverflow + delta - into);
+    }
+    var take = -delta;
+    final fromOverflow = math.min(take, acornsOverflow);
+    take -= fromOverflow;
+    return copyWith(acornsOverflow: acornsOverflow - fromOverflow, acorns: math.max(0, acorns - take));
+  }
+
+  /// Spends [cost] Acorns from the Granary, then lets waiting Acorns in.
+  AppSettings spendAcorns(int cost) => copyWith(acorns: math.max(0, acorns - cost)).settleOverflow();
+
+  /// Moves waiting Acorns into the Granary while there's room.
+  AppSettings settleOverflow() {
+    final room = math.max(0, granaryCap - acorns);
+    final into = math.min(room, acornsOverflow);
+    if (into == 0) return this;
+    return copyWith(acorns: acorns + into, acornsOverflow: acornsOverflow - into);
+  }
 
   double get hearthMultiplier => switch (hearthWarmth) {
         >= 3 => 1.5,
@@ -75,6 +116,8 @@ class AppSettings {
   AppSettings copyWith({
     int? checkingCents,
     int? acorns,
+    int? acornsOverflow,
+    int? granaryLevel,
     int? goldenAcorns,
     int? goldenSavingsMilestones,
     int? hearthWarmth,
@@ -87,13 +130,14 @@ class AppSettings {
     int? focusShiftsCompleted,
     int? focusMinutesTotal,
     bool? ambientOn,
-    AmbientTrack? ambientTrack,
     bool? sfxOn,
     bool? hapticsOn,
   }) =>
       AppSettings(
         checkingCents: checkingCents ?? this.checkingCents,
         acorns: acorns ?? this.acorns,
+        acornsOverflow: acornsOverflow ?? this.acornsOverflow,
+        granaryLevel: granaryLevel ?? this.granaryLevel,
         goldenAcorns: goldenAcorns ?? this.goldenAcorns,
         goldenSavingsMilestones:
             goldenSavingsMilestones ?? this.goldenSavingsMilestones,
@@ -107,7 +151,6 @@ class AppSettings {
         focusShiftsCompleted: focusShiftsCompleted ?? this.focusShiftsCompleted,
         focusMinutesTotal: focusMinutesTotal ?? this.focusMinutesTotal,
         ambientOn: ambientOn ?? this.ambientOn,
-        ambientTrack: ambientTrack ?? this.ambientTrack,
         sfxOn: sfxOn ?? this.sfxOn,
         hapticsOn: hapticsOn ?? this.hapticsOn,
       );
@@ -115,6 +158,8 @@ class AppSettings {
   Map<String, String> toMap() => {
         'checking_cents': '$checkingCents',
         'acorns': '$acorns',
+        'acorns_overflow': '$acornsOverflow',
+        'granary_level': '$granaryLevel',
         'golden_acorns': '$goldenAcorns',
         'golden_savings_milestones': '$goldenSavingsMilestones',
         'hearth_warmth': '$hearthWarmth',
@@ -127,7 +172,6 @@ class AppSettings {
         'focus_shifts_completed': '$focusShiftsCompleted',
         'focus_minutes_total': '$focusMinutesTotal',
         'ambient_on': ambientOn ? '1' : '0',
-        'ambient_track': ambientTrack.name,
         'sfx_on': sfxOn ? '1' : '0',
         'haptics_on': hapticsOn ? '1' : '0',
       };
@@ -145,6 +189,11 @@ class AppSettings {
     return AppSettings(
       checkingCents: i('checking_cents', d.checkingCents),
       acorns: acorns,
+      acornsOverflow: i('acorns_overflow', 0),
+      granaryLevel: (m.containsKey('granary_level')
+              ? i('granary_level', 1)
+              : ColonyEconomy.granaryLevelFor(acorns))
+          .clamp(1, ColonyEconomy.granaryMax),
       goldenAcorns: i('golden_acorns', d.goldenAcorns),
       goldenSavingsMilestones:
           i('golden_savings_milestones', d.goldenSavingsMilestones),
@@ -158,7 +207,6 @@ class AppSettings {
       focusShiftsCompleted: i('focus_shifts_completed', d.focusShiftsCompleted),
       focusMinutesTotal: i('focus_minutes_total', d.focusMinutesTotal),
       ambientOn: b('ambient_on', d.ambientOn),
-      ambientTrack: AmbientTrack.parse(m['ambient_track']),
       sfxOn: b('sfx_on', d.sfxOn),
       hapticsOn: b('haptics_on', d.hapticsOn),
     );

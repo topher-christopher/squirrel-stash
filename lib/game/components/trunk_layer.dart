@@ -7,7 +7,9 @@ import '../layout.dart';
 import 'diorama_layer.dart';
 
 /// The Great Oak's bark silhouette, carved hollow, floor beams, the central
-/// lift shaft, the grassy terrace and its Display Pedestals (static, cached).
+/// lift shaft (ending at the root concourse), the grassy ground line, the
+/// concourse tunnel, and the Canopy Terrace with its stone Display
+/// Pedestals (static, cached).
 class TrunkLayer extends DioramaLayer {
   TrunkLayer() : super(priority: 10);
 
@@ -15,7 +17,7 @@ class TrunkLayer extends DioramaLayer {
 
   @override
   void render(Canvas canvas) {
-    final key = '${snap.frost}|${snap.pedestals.join(',')}';
+    final key = '${snap.frost}|${snap.winter}|${snap.pedestals.join(',')}';
     _cache.draw(canvas, key, _paint);
   }
 
@@ -24,7 +26,6 @@ class TrunkLayer extends DioramaLayer {
     const bounds = Rect.fromLTRB(14, TreeLayout.trunkTop, 586, TreeLayout.groundY + 6);
     c.drawPath(trunk, Kit.linear(bounds.centerLeft, bounds.centerRight,
         const [Pal.barkDark, Pal.bark, Pal.barkLight, Pal.bark, Pal.barkDark], const [0, 0.12, 0.5, 0.88, 1]));
-    // Bark grooves along both edges
     final rng = math.Random(17);
     for (var k = 0; k < 14; k++) {
       final left = k.isEven;
@@ -38,25 +39,39 @@ class TrunkLayer extends DioramaLayer {
     c.drawRRect(Kit.rr(hollow, 26), Kit.vertical(hollow, const [Pal.hollow, Color(0xFF1E0F06)]));
     c.drawRRect(Kit.rr(hollow, 26), Kit.stroke(const Color(0x88000000), 5));
     Kit.woodGrain(c, hollow.deflate(10), const Color(0x14FDE68A), seed: 4, lines: 18);
-    // Floor beams between trunk floors
-    for (final y in const [412.0, 576.0, 740.0]) {
-      final beam = Rect.fromLTRB(42, y - 4, 558, y + 4);
+    // Floor beams: left hero column and right compact column
+    for (final (y, l, r) in const [
+      (412.0, 42.0, 350.0), (576.0, 42.0, 350.0), (740.0, 42.0, 350.0),
+      (406.0, 378.0, 558.0), (562.0, 378.0, 558.0), (674.0, 378.0, 558.0),
+    ]) {
+      final beam = Rect.fromLTRB(l, y - 4, r, y + 4);
       c.drawRect(beam, Kit.vertical(beam, const [Color(0xFF6B3D1E), Color(0xFF3B1E0B)]));
-      for (var x = 60.0; x < 558; x += 64) {
+      for (var x = l + 18; x < r; x += 64) {
         c.drawCircle(Offset(x, y), 1.2, Kit.fill(const Color(0xFF78716C)));
       }
     }
-    // Central lift shaft (through the trunk and down into the Metro)
-    const shaft = Rect.fromLTRB(TreeLayout.shaftLeft, 232, TreeLayout.shaftRight, TreeLayout.shaftBottom);
+    _shaft(c);
+    _ground(c, rng);
+    _concourse(c);
+    _deck(c);
+  }
+
+  /// The central lift shaft, down through the trunk and the soil, ending
+  /// on the concourse floor (it never enters the Metro).
+  void _shaft(Canvas c) {
+    const shaft = Rect.fromLTRB(TreeLayout.shaftLeft, 232, TreeLayout.shaftRight, TreeLayout.groundY);
     c.drawRect(shaft, Kit.fill(Pal.chuteShaft));
     c.drawRect(shaft, Kit.linear(shaft.centerLeft, shaft.centerRight,
         const [Color(0x55000000), Color(0x00000000), Color(0x55000000)]));
     for (final x in const [TreeLayout.shaftLeft + 2, TreeLayout.shaftRight - 2]) {
       c.drawLine(Offset(x, 232), Offset(x, TreeLayout.shaftBottom), Kit.stroke(Pal.rail, 2.4));
     }
-    // Ground terrace & grass tufts at the trunk's base
-    final grass = snap.frost ? Pal.frostGround : Pal.grass;
-    final grassDark = snap.frost ? const Color(0xFFCBD5E1) : Pal.grassDark;
+  }
+
+  void _ground(Canvas c, math.Random rng) {
+    final snowy = snap.frost || snap.winter;
+    final grass = snowy ? Pal.frostGround : Pal.grass;
+    final grassDark = snowy ? const Color(0xFFCBD5E1) : Pal.grassDark;
     final terrace = Path()
       ..moveTo(0, TreeLayout.groundY - 4)
       ..quadraticBezierTo(300, TreeLayout.groundY - 14, 600, TreeLayout.groundY - 4)
@@ -72,38 +87,77 @@ class TrunkLayer extends DioramaLayer {
       c.drawLine(Offset(x, y + 4), Offset(x - 2, y - 2), Kit.stroke(grassDark, 1.2));
       c.drawLine(Offset(x, y + 4), Offset(x + 2, y - 3), Kit.stroke(grassDark, 1.2));
     }
-    // Shaft keeps going down through the soil as a lined tunnel
-    c.drawRect(const Rect.fromLTRB(TreeLayout.shaftLeft - 3, TreeLayout.groundY + 6, TreeLayout.shaftRight + 3, 796),
-        Kit.fill(const Color(0xFF3B1E0B)));
-    c.drawRect(const Rect.fromLTRB(TreeLayout.shaftLeft, TreeLayout.groundY + 6, TreeLayout.shaftRight, 796),
-        Kit.fill(Pal.chuteShaft));
-    for (var i = 0; i < TreeLayout.pedestals.length; i++) {
-      _pedestal(c, TreeLayout.pedestals[i], i < snap.pedestals.length ? snap.pedestals[i] : '');
+    // The shaft punches through the grass as a stone-lined well
+    c.drawRect(const Rect.fromLTRB(TreeLayout.shaftLeft - 4, TreeLayout.groundY - 2, TreeLayout.shaftRight + 4,
+        TreeLayout.groundY + 14), Kit.fill(const Color(0xFF57534E)));
+    c.drawRect(const Rect.fromLTRB(TreeLayout.shaftLeft, TreeLayout.groundY - 2, TreeLayout.shaftRight,
+        TreeLayout.shaftBottom), Kit.fill(Pal.chuteShaft));
+  }
+
+  /// Root concourse: lift landing, burrow tunnel and stairs to the Metro.
+  void _concourse(Canvas c) {
+    const r = TreeLayout.concourse;
+    c.drawRRect(Kit.rr(r, 10), Kit.vertical(r, const [Color(0xFF2A160A), Color(0xFF1A0D05)]));
+    c.drawRRect(Kit.rr(r, 10), Kit.stroke(Pal.rootDark, 2));
+    final floor = Rect.fromLTRB(r.left + 4, r.bottom - 5, r.right - 4, r.bottom - 1);
+    c.drawRect(floor, Kit.fill(const Color(0xFF5C3419)));
+    // Lift landing platform and buffer
+    c.drawRect(Rect.fromLTRB(TreeLayout.shaftLeft - 8, r.bottom - 6, TreeLayout.shaftRight + 8, r.bottom - 2),
+        Kit.fill(const Color(0xFF8B5A2B)));
+    c.drawLine(Offset(TreeLayout.shaftLeft - 8, r.bottom - 6), Offset(TreeLayout.shaftRight + 8, r.bottom - 6),
+        Kit.stroke(Pal.brass, 1));
+    // Burrow tunnel rising to the hole on the grass
+    final hole = TreeLayout.burrowHole;
+    c.drawRect(Rect.fromLTRB(hole.dx - 8, TreeLayout.groundY + 2, hole.dx + 8, r.top + 4), Kit.fill(const Color(0xFF1A0D05)));
+    // Stairs down to the Metro platform
+    for (var i = 0; i < 4; i++) {
+      c.drawRect(Rect.fromLTWH(r.left + 30 + i * 6.0, r.bottom - 6 + i * 3.0, 14, 3), Kit.fill(const Color(0xFF78716C)));
+    }
+    // Hanging root lamps
+    for (final x in const [150.0, 260.0, 470.0]) {
+      Kit.glow(c, Offset(x, r.top + 9), 12, const Color(0xFFFDE68A), 0.35);
+      c.drawCircle(Offset(x, r.top + 9), 2, Kit.fill(const Color(0xFFFEF3C7)));
+    }
+  }
+
+  /// The Canopy Terrace deck and its stone Display Pedestals.
+  void _deck(Canvas c) {
+    const y = TreeLayout.deckY;
+    final deck = Rect.fromLTRB(70, y, 530, y + 7);
+    c.drawRRect(Kit.rr(deck, 2), Kit.vertical(deck, const [Color(0xFF9A5B2C), Color(0xFF5C3419)]));
+    for (var x = deck.left + 14; x < deck.right; x += 18) {
+      c.drawLine(Offset(x, y), Offset(x, y + 7), Kit.stroke(const Color(0x44000000), 1));
+    }
+    if (snap.frost || snap.winter) {
+      c.drawRRect(Kit.rr(Rect.fromLTRB(deck.left, y - 2, deck.right, y + 1.5), 1.5), Kit.fill(const Color(0xF2FFFFFF)));
+    }
+    for (var i = 0; i < snap.pedestals.length && i < TreeLayout.pedestals.length; i++) {
+      _pedestal(c, TreeLayout.pedestals[i], snap.pedestals[i]);
     }
   }
 
   static void _pedestal(Canvas c, Offset base, String kind) {
-    final column = Rect.fromLTWH(base.dx - 9, base.dy - 22, 18, 22);
-    c.drawRect(Rect.fromLTWH(base.dx - 12, base.dy - 4, 24, 5), Kit.fill(const Color(0xFF78716C)));
+    final column = Rect.fromLTWH(base.dx - 8, base.dy - 20, 16, 20);
+    c.drawRect(Rect.fromLTWH(base.dx - 11, base.dy - 4, 22, 5), Kit.fill(const Color(0xFF78716C)));
     c.drawRect(column, Kit.linear(column.centerLeft, column.centerRight,
         const [Color(0xFF78716C), Color(0xFFD6D3D1), Color(0xFF78716C)]));
-    c.drawRect(Rect.fromLTWH(base.dx - 12, base.dy - 26, 24, 5), Kit.fill(const Color(0xFFA8A29E)));
-    final top = base.translate(0, -26);
+    c.drawRect(Rect.fromLTWH(base.dx - 11, base.dy - 24, 22, 5), Kit.fill(const Color(0xFFA8A29E)));
+    final top = base.translate(0, -24);
     switch (kind) {
       case 'statue':
         Kit.glow(c, top.translate(0, -10), 16, const Color(0xFFFDE047), 0.35);
-        c.drawOval(Kit.oval(top.translate(0, -8), 4.5, 6), Kit.fill(const Color(0xFFFACC15)));
-        c.drawCircle(top.translate(0.5, -16), 3.6, Kit.fill(const Color(0xFFFACC15)));
+        c.drawOval(Kit.oval(top.translate(0, -7), 4.2, 5.6), Kit.fill(const Color(0xFFFACC15)));
+        c.drawCircle(top.translate(0.5, -14.5), 3.4, Kit.fill(const Color(0xFFFACC15)));
       case 'feat':
-        c.drawPath(Path()..moveTo(top.dx - 6, top.dy - 16)..lineTo(top.dx + 6, top.dy - 16)..lineTo(top.dx + 6, top.dy - 8)
-          ..quadraticBezierTo(top.dx, top.dy, top.dx - 6, top.dy - 8)..close(), Kit.fill(const Color(0xFF94A3B8)));
-        c.drawLine(Offset(top.dx, top.dy - 15), Offset(top.dx, top.dy - 4), Kit.stroke(const Color(0xFFDC2626), 1.4));
+        c.drawPath(Path()..moveTo(top.dx - 6, top.dy - 15)..lineTo(top.dx + 6, top.dy - 15)..lineTo(top.dx + 6, top.dy - 7)
+          ..quadraticBezierTo(top.dx, top.dy, top.dx - 6, top.dy - 7)..close(), Kit.fill(const Color(0xFF94A3B8)));
+        c.drawLine(Offset(top.dx, top.dy - 14), Offset(top.dx, top.dy - 4), Kit.stroke(const Color(0xFFDC2626), 1.4));
       case 'trinket':
         Kit.glow(c, top.translate(0, -8), 14, const Color(0xFF38BDF8), 0.35);
-        c.drawCircle(top.translate(0, -7), 6, Kit.fill(const Color(0xFFC2410C)));
-        c.drawCircle(top.translate(0, -7), 4.2, Kit.stroke(const Color(0xFFFB923C), 0.8));
+        c.drawCircle(top.translate(0, -6.5), 5.6, Kit.fill(const Color(0xFFC2410C)));
+        c.drawCircle(top.translate(0, -6.5), 3.9, Kit.stroke(const Color(0xFFFB923C), 0.8));
       default:
-        c.drawCircle(top.translate(0, -6), 4, Kit.stroke(const Color(0x66FDE68A), 1));
+        c.drawCircle(top.translate(0, -5), 3.6, Kit.stroke(const Color(0x66FDE68A), 1));
     }
   }
 

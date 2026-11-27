@@ -13,7 +13,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../widgets/animated_money.dart';
 import '../widgets/stash_controls.dart';
-import 'decor_shop.dart';
+import 'colony_cards.dart';
 import 'drawer_shell.dart';
 import 'habit_editor.dart';
 import 'lab_sections.dart';
@@ -94,7 +94,7 @@ class _LabBodyState extends ConsumerState<LabBody> {
         _LabTab.downsize => [const DownsizeCalculator()],
         _LabTab.habits => [const HabitManager()],
       },
-      const RoomUpgradeCard(room: RoomKey.lab),
+      const RoomThemeCard(room: RoomKey.lab),
     ]);
   }
 }

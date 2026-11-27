@@ -9,7 +9,10 @@ import '../../providers/art_assets_provider.dart';
 abstract final class RoomIcons {
   static IconData icon(RoomKey room) => switch (room) {
         RoomKey.treasury => Icons.savings_rounded,
-        RoomKey.outfitter => Icons.checkroom_rounded,
+        RoomKey.birdFeeder => Icons.flutter_dash_rounded,
+        RoomKey.burrow => Icons.backpack_rounded,
+        RoomKey.hearth => Icons.local_fire_department_rounded,
+        RoomKey.outfitter => Icons.skateboarding_rounded,
         RoomKey.lab => Icons.science_rounded,
         RoomKey.trophyHall => Icons.emoji_events_rounded,
         RoomKey.billVault => Icons.receipt_long_rounded,
@@ -27,6 +30,9 @@ abstract final class RoomIcons {
 
   static Color accent(RoomKey room) => switch (room) {
         RoomKey.treasury => const Color(0xFF4ADE80),
+        RoomKey.birdFeeder => const Color(0xFF7DD3FC),
+        RoomKey.burrow => const Color(0xFFBEF264),
+        RoomKey.hearth => const Color(0xFFFB923C),
         RoomKey.outfitter => const Color(0xFFF472B6),
         RoomKey.lab => const Color(0xFF6EE7B7),
         RoomKey.trophyHall => const Color(0xFFFBBF24),

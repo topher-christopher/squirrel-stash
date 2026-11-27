@@ -15,7 +15,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../widgets/acorn_icons.dart';
 import '../widgets/stash_controls.dart';
-import 'decor_shop.dart';
+import 'colony_cards.dart';
 import 'drawer_shell.dart';
 import 'stats_dashboard.dart';
 
@@ -99,7 +99,7 @@ class TrophyHallBody extends ConsumerWidget {
             ]),
           ),
         ),
-      const RoomUpgradeCard(room: RoomKey.trophyHall),
+      const RoomThemeCard(room: RoomKey.trophyHall),
     ]);
   }
 

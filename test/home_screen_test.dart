@@ -58,10 +58,10 @@ void main() {
     await _pumpFrames(tester, 10);
     expect(find.text(r'+$7 Saved! +70'), findsOneWidget);
 
-    // Swipe left to the next room (Trophy Hall) without closing the drawer.
+    // Swipe left to the next room (the Ratatouille Kitchen) without closing the drawer.
     await tester.dragFrom(tester.getTopLeft(find.byType(PageView)) + const Offset(300, 12), const Offset(-260, 0));
     await _pumpFrames(tester, 60);
-    expect(find.text('📊 Lifetime Stats Ledger'), findsOneWidget);
+    expect(find.text('Home-Cooked Meals'), findsOneWidget);
 
     // Let banners / reactions time out so no timers are left pending.
     await tester.pump(const Duration(seconds: 6));

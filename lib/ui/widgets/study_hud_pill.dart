@@ -5,9 +5,9 @@ import '../../core/haptics.dart';
 import '../../models/room.dart';
 import '../../providers/finance_providers.dart';
 import '../../providers/focus_provider.dart';
+import '../../providers/rooms_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/stash_actions.dart';
-import '../../providers/ui_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../drawers/drawers.dart';
@@ -91,7 +91,8 @@ class _Controls extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final actions = ref.read(stashActionsProvider);
     final privacy = ref.watch(settingsProvider.select((s) => s.privacyMode));
-    final preview = ref.watch(uiProvider.select((u) => u.previewMax));
+    final allMax = ref.watch(roomsProvider.select((r) => r.allMax));
+    final allStarter = ref.watch(roomsProvider.select((r) => r.allStarter));
     return FittedBox(
       fit: BoxFit.scaleDown,
       child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -103,10 +104,11 @@ class _Controls extends ConsumerWidget {
         const SizedBox(width: 6),
         const _FocusPill(),
         const SizedBox(width: 6),
-        _PreviewSwitch(max: preview, onTap: () {
-          Haptics.tap();
-          ref.read(uiProvider.notifier).togglePreviewMax();
-        }),
+        _LookSwitch(
+          max: allMax,
+          starter: allStarter,
+          onPick: (max) => actions.setAllRoomThemes(max ? RoomLevels.max : 1),
+        ),
         const SizedBox(width: 6),
         _IconPeg(
           icon: privacy ? Icons.visibility_off_rounded : Icons.visibility_rounded,
@@ -146,33 +148,36 @@ class _FocusPill extends ConsumerWidget {
   }
 }
 
-class _PreviewSwitch extends StatelessWidget {
-  const _PreviewSwitch({required this.max, required this.onTap});
+/// Starter | Max: re-themes every room in the tree at once (free). When the
+/// rooms are a mix of themes neither side is lit.
+class _LookSwitch extends StatelessWidget {
+  const _LookSwitch({required this.max, required this.starter, required this.onPick});
 
   final bool max;
-  final VoidCallback onTap;
+  final bool starter;
+  final ValueChanged<bool> onPick;
 
   @override
   Widget build(BuildContext context) {
-    Widget seg(String label, bool on) => AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-          decoration: BoxDecoration(
-            color: on ? AppColors.amber.withValues(alpha: 0.85) : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
+    Widget seg(String label, bool on, bool pickMax) => PressScale(
+          onTap: () => onPick(pickMax),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+            decoration: BoxDecoration(
+              color: on ? AppColors.amber.withValues(alpha: 0.85) : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(label, style: AppType.title(11.5, weight: FontWeight.w700, color: on ? AppColors.night : AppColors.honey)),
           ),
-          child: Text(label, style: AppType.title(11.5, weight: FontWeight.w700, color: on ? AppColors.night : AppColors.honey)),
         );
     return Tooltip(
-      message: 'Room preview: Starter vs. Max Unlocked',
-      child: PressScale(
-        onTap: onTap,
-        child: Container(
-          height: 32,
-          padding: const EdgeInsets.all(3),
-          decoration: BoxDecoration(color: const Color(0xCC292524), borderRadius: BorderRadius.circular(16)),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [seg('Starter', !max), seg('Max', max)]),
-        ),
+      message: 'Re-theme every room: Starter or Max',
+      child: Container(
+        height: 32,
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(color: const Color(0xCC292524), borderRadius: BorderRadius.circular(16)),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [seg('Starter', starter, false), seg('Max', max, true)]),
       ),
     );
   }

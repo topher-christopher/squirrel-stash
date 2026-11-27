@@ -10,7 +10,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../widgets/animated_money.dart';
 import '../widgets/stash_controls.dart';
-import 'decor_shop.dart';
+import 'colony_cards.dart';
 import 'drawer_shell.dart';
 import 'prompts.dart';
 
@@ -99,7 +99,7 @@ class TreasuryBody extends ConsumerWidget {
       const SizedBox(height: 10),
       Text('Spending never dips into acorns already stashed in Goal Chambers.',
           style: AppType.body(12, color: AppColors.stoneDim, height: 1.35)),
-      const RoomUpgradeCard(room: RoomKey.treasury),
+      const RoomThemeCard(room: RoomKey.treasury),
     ]);
   }
 }

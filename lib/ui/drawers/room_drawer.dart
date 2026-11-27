@@ -13,9 +13,12 @@ import '../widgets/animated_money.dart';
 import '../widgets/room_icons.dart';
 import '../widgets/stash_controls.dart';
 import 'bills_drawer.dart';
+import 'bird_feeder_drawer.dart';
+import 'burrow_drawer.dart';
 import 'drawer_shell.dart';
 import 'goals_drawer.dart';
 import 'half_sheet.dart';
+import 'hearth_drawer.dart';
 import 'kitchen_drawer.dart';
 import 'lab_drawer.dart';
 import 'metro_drawer.dart';
@@ -151,6 +154,9 @@ class _RoomDrawerState extends ConsumerState<RoomDrawer> {
 /// The scrollable content for one room page.
 Widget roomBody(RoomKey room) => switch (room) {
       RoomKey.treasury => const TreasuryBody(),
+      RoomKey.birdFeeder => const BirdFeederBody(),
+      RoomKey.burrow => const BurrowBody(),
+      RoomKey.hearth => const HearthBody(),
       RoomKey.outfitter => const OutfitterBody(),
       RoomKey.lab => const LabBody(),
       RoomKey.trophyHall => const TrophyHallBody(),

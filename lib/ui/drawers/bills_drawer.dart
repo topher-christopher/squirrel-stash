@@ -13,13 +13,14 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../widgets/stash_controls.dart';
 import 'card_insights_view.dart';
-import 'decor_shop.dart';
+import 'colony_cards.dart';
 import 'drawer_shell.dart';
 import 'etch_board.dart';
 import 'prompts.dart';
 
-/// Hollow Log Bill Vault: Etch A Sketch due dates, the safety waterline,
-/// bills (statements for cards), card spend insights and adding bills.
+/// Hollow Log Bill Vault: the due-date countdown board, the waterline
+/// scene, bills (statements for cards), card spend insights and adding
+/// bills. (The Etch A Sketch lives only here now, not in the room art.)
 class BillsBody extends ConsumerWidget {
   const BillsBody({super.key});
 
@@ -38,12 +39,17 @@ class BillsBody extends ConsumerWidget {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: (f.frost ? AppColors.alert : AppColors.sky).withValues(alpha: 0.5)),
         ),
-        child: Text(
-          f.frost
-              ? '❄️ Below the waterline: unpaid bills (${Money.whole(f.upcomingBillsCents)}) exceed Free Cash (${Money.whole(f.freeCashCents)})'
-              : '🌊 Above the waterline: Free Cash (${Money.whole(f.freeCashCents)}) covers unpaid bills (${Money.whole(f.upcomingBillsCents)})',
-          style: AppType.body(12.5, weight: FontWeight.w800, color: f.frost ? const Color(0xFFFEE2E2) : const Color(0xFFE0F2FE)),
-        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(
+            f.frost
+                ? '❄️ Below the waterline: unpaid bills (${Money.whole(f.upcomingBillsCents)}) exceed Free Cash (${Money.whole(f.freeCashCents)})'
+                : '🌊 Above the waterline: Free Cash (${Money.whole(f.freeCashCents)}) covers unpaid bills (${Money.whole(f.upcomingBillsCents)})',
+            style: AppType.body(12.5, weight: FontWeight.w800, color: f.frost ? const Color(0xFFFEE2E2) : const Color(0xFFE0F2FE)),
+          ),
+          const SizedBox(height: 4),
+          Text(_scene(f.upcomingBillsCents, f.freeCashCents),
+              style: AppType.body(11.5, color: const Color(0xCCE0F2FE), height: 1.3)),
+        ]),
       ),
       SectionLabel('Bills', trailing: Text('Tap a bill for options', style: AppType.body(11, color: AppColors.stoneDim))),
       if (bills.isEmpty)
@@ -56,7 +62,7 @@ class BillsBody extends ConsumerWidget {
       const CardInsightsView(),
       const SectionLabel('+ Add Bill'),
       const _AddBillForm(),
-      const RoomUpgradeCard(room: RoomKey.billVault),
+      const RoomThemeCard(room: RoomKey.billVault),
     ]);
   }
 
@@ -100,6 +106,15 @@ class BillsBody extends ConsumerWidget {
             confirmLabel: 'Remove', destructive: true);
         if (ok) notifier.remove(bill.id);
     }
+  }
+
+  /// Which waterline scene the vault is playing (bills ÷ Free Cash).
+  static String _scene(int bills, int free) {
+    final p = bills == 0 ? 0.0 : (free <= 0 ? 2.0 : bills / free);
+    final pct = (p * 100).round();
+    if (p < 0.25) return 'Low water ($pct% of Free Cash): a shallow brook, lawn chairs and acorn-cup drinks.';
+    if (p <= 0.5) return 'Mid water ($pct%): squirrels paddle a walnut skiff and patch the bark seams.';
+    return 'High water ($pct%): the brass scuba diver hunts sunken acorns while the raft angler keeps losing one.';
   }
 
   static Widget _option(BuildContext c, String value, IconData icon, String label) => ListTile(

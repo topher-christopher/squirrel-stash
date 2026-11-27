@@ -1,5 +1,7 @@
 import 'bill.dart';
+import 'bird.dart';
 import 'decor.dart';
+import 'expedition.dart';
 import 'feat.dart';
 import 'goal.dart';
 import 'grocery_trip.dart';
@@ -25,6 +27,9 @@ class StashSnapshot {
     this.groceries = const [],
     this.rides = const [],
     this.awards = const [],
+    this.expeditions = const [],
+    this.seedBags = const {},
+    this.birdLog = const [],
   });
 
   final Map<String, String> settings;
@@ -42,6 +47,15 @@ class StashSnapshot {
   final List<MetroRide> rides;
   final List<FeatAward> awards;
 
+  /// Scavenger Burrow squads (active and returned).
+  final List<Expedition> expeditions;
+
+  /// Ready-to-pour seed bags on hand.
+  final Map<SeedKind, int> seedBags;
+
+  /// Lifetime Bird & Critter Logbook.
+  final List<BirdLogEntry> birdLog;
+
   bool get isEmpty =>
       settings.isEmpty &&
       bills.isEmpty &&
@@ -54,7 +68,10 @@ class StashSnapshot {
       decor.isEmpty &&
       groceries.isEmpty &&
       rides.isEmpty &&
-      awards.isEmpty;
+      awards.isEmpty &&
+      expeditions.isEmpty &&
+      seedBags.isEmpty &&
+      birdLog.isEmpty;
 
   StashSnapshot copyWith({
     Map<String, String>? settings,
@@ -69,6 +86,9 @@ class StashSnapshot {
     List<GroceryTrip>? groceries,
     List<MetroRide>? rides,
     List<FeatAward>? awards,
+    List<Expedition>? expeditions,
+    Map<SeedKind, int>? seedBags,
+    List<BirdLogEntry>? birdLog,
   }) =>
       StashSnapshot(
         settings: settings ?? this.settings,
@@ -83,5 +103,8 @@ class StashSnapshot {
         groceries: groceries ?? this.groceries,
         rides: rides ?? this.rides,
         awards: awards ?? this.awards,
+        expeditions: expeditions ?? this.expeditions,
+        seedBags: seedBags ?? this.seedBags,
+        birdLog: birdLog ?? this.birdLog,
       );
 }

@@ -15,7 +15,8 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../widgets/animated_money.dart';
 import '../widgets/stash_controls.dart';
-import 'decor_shop.dart';
+import 'colony_cards.dart';
+import 'colony_tiles.dart';
 import 'drawer_shell.dart';
 import 'habit_editor.dart';
 import 'prompts.dart';
@@ -127,7 +128,9 @@ class MetroBody extends ConsumerWidget {
             ),
           ),
       ],
-      const RoomUpgradeCard(room: RoomKey.metro),
+      const SectionLabel('Colony boosts'),
+      const RushHourTile(),
+      const RoomThemeCard(room: RoomKey.metro),
     ]);
   }
 }

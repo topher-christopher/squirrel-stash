@@ -44,6 +44,17 @@ class PocketArt extends RoomArt {
       default:
         break;
     }
+    if (x.level >= 2) RoomKit.lamp(c, Offset(x.r.right - 16, x.r.top + 10), x.t, size: 0.7);
+    if (x.level >= 3) {
+      // A little gold-coin stash glinting in the corner
+      final base = Offset(x.r.left + 12, f + 2);
+      for (var k = 0; k < 4; k++) {
+        c.drawOval(Kit.oval(base.translate(0, -k * 2.2), 5, 1.6), Kit.fill(const Color(0xFFFACC15)));
+        c.drawOval(Kit.oval(base.translate(0, -k * 2.2), 5, 1.6), Kit.stroke(const Color(0xFFB45309), 0.5));
+      }
+      final s = (x.t * 0.6 + x.r.left) % 1.0;
+      Kit.sparkle(c, base.translate(4, -12), 2.4 * math.sin(s * math.pi), const Color(0xFFFFF7AE));
+    }
   }
 
   static void _brokerage(Canvas c, RoomCtx x, Offset o, double f, bool up) {

@@ -21,10 +21,9 @@ flutter run            # Android device/emulator (needs Android Studio once)
 flutter run -d chrome  # quick browser preview (in-memory demo data)
 ```
 
-- Design blueprint: `GEMINI_PROTOTYPE.txt`
 - Engineering rules: `CLAUDE.md`
 - Current status, folder tree, and next steps: `STATUS.md`
-- Custom artwork: drop PNGs into `assets/images/windows/`, `assets/images/props/`
-  or `assets/sprites/squirrels/` (see the JSON templates in each folder).
+- Custom artwork: drop PNGs into `assets/images/rooms/`, `icons/`, `props/`, `outfitter/`,
+  `metro/` or `assets/sprites/squirrels/` (see the JSON templates in each folder).
 
 Fonts: Fredoka and Nunito, SIL Open Font License (see `assets/fonts/`).

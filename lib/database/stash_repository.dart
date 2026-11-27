@@ -1,5 +1,7 @@
 import '../models/bill.dart';
+import '../models/bird.dart';
 import '../models/decor.dart';
+import '../models/expedition.dart';
 import '../models/feat.dart';
 import '../models/goal.dart';
 import '../models/grocery_trip.dart';
@@ -49,6 +51,13 @@ abstract interface class StashRepository {
   Future<void> deleteRide(String id);
 
   Future<void> upsertAwards(List<FeatAward> awards);
+
+  Future<void> upsertExpedition(Expedition expedition);
+
+  /// Sets how many bags of [seed] are on hand.
+  Future<void> putSeedBags(SeedKind seed, int bags);
+
+  Future<void> upsertBirdLog(List<BirdLogEntry> entries);
 
   Future<void> close();
 }

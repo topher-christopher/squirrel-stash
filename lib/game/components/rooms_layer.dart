@@ -4,6 +4,9 @@ import '../../models/room.dart';
 import '../art/paint_kit.dart';
 import '../layout.dart';
 import '../rooms/bill_vault_art.dart';
+import '../rooms/bird_feeder_art.dart';
+import '../rooms/burrow_art.dart';
+import '../rooms/hearth_art.dart';
 import '../rooms/kitchen_art.dart';
 import '../rooms/lab_goals_art.dart';
 import '../rooms/metro_art.dart';
@@ -15,7 +18,7 @@ import '../rooms/trophy_hall_art.dart';
 import 'diorama_layer.dart';
 
 /// Draws every room: a cached static layer per room (re-recorded when its
-/// level or contents change) and its animated residents each frame.
+/// theme or contents change) and its animated residents each frame.
 class RoomsLayer extends DioramaLayer {
   RoomsLayer() : super(priority: 30);
 
@@ -25,15 +28,18 @@ class RoomsLayer extends DioramaLayer {
 
   final Map<RoomKey, RoomArt> _art = {
     RoomKey.treasury: const TreasuryArt(),
+    RoomKey.birdFeeder: BirdFeederArt(),
     RoomKey.outfitter: const OutfitterArt(),
     RoomKey.lab: LabArt(),
-    RoomKey.trophyHall: const TrophyHallArt(),
-    RoomKey.billVault: BillVaultArt(),
     RoomKey.kitchen: const KitchenArt(),
+    RoomKey.trophyHall: const TrophyHallArt(),
+    RoomKey.billVault: const BillVaultArt(),
     RoomKey.goals: const GoalsArt(),
+    RoomKey.burrow: const BurrowArt(),
     RoomKey.metro: const MetroArt(),
     for (final r in RoomKey.values)
-      if (r.size == RoomSize.pocket) r: const PocketArt(),
+      if (r.reserve != null) r: const PocketArt(),
+    RoomKey.hearth: const HearthArt(),
   };
 
   @override
@@ -43,10 +49,12 @@ class RoomsLayer extends DioramaLayer {
         room: room,
         r: TreeLayout.room(room),
         t: t,
+        work: work,
         level: snap.levelOf(room),
         detail: game.detail,
         snap: snap,
         art: game.art,
+        since: game.since,
       );
       final art = _art[room]!;
       final squash = game.pokeAmount(room.name);
@@ -57,7 +65,7 @@ class RoomsLayer extends DioramaLayer {
         canvas.scale(1 + squash * 0.025, 1 - squash * 0.035);
         canvas.translate(-pivot.dx, -pivot.dy);
       }
-      final key = '${ctx.level}|${snap.frost}|${_contentKey(room)}|${game.art.isEmpty}';
+      final key = '${ctx.level}|${snap.frost}|${snap.winter}|${_contentKey(room)}|${game.art.isEmpty}';
       _caches[room]!.draw(canvas, key, (c) {
         if (!RoomKit.customArt(c, ctx)) {
           art.paintStatic(c, ctx);

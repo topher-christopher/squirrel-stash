@@ -82,10 +82,7 @@ class RewardService {
     final acorns = awards.fold<int>(0, (s, a) => s + a.acorns);
     final golden = awards.fold<int>(0, (s, a) => s + a.golden);
     if (acorns > 0 || golden > 0) {
-      _settings.update((s) => s.copyWith(
-            acorns: s.acorns + acorns,
-            goldenAcorns: s.goldenAcorns + golden,
-          ));
+      _settings.update((s) => s.withAcorns(acorns).copyWith(goldenAcorns: s.goldenAcorns + golden));
     }
     final visible = awards.where((a) => a.featKey != Feats.fourSeasonsStage).toList();
     if (visible.isEmpty || !announce) return;
@@ -99,6 +96,6 @@ class RewardService {
         icon: def?.icon ?? '🏆');
     _emit(const DioramaEvent(DioramaEventKind.trophy));
     Haptics.celebrate();
-    sfx(Sfx.chime);
+    sfx(Sfx.plink);
   }
 }

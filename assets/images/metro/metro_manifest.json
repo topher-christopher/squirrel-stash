@@ -1,0 +1,6 @@
+{
+  "_doc": "Optional DC Metro drop-ins. Save the PNG in this folder and rebuild.",
+  "images": {
+    "custom_caps_flag.png": { "box": { "w": 18, "h": 12 }, "use": "Flag waved by the Capitals fans who step off at Gallery Place and Metro Center (pole drawn beside it)" }
+  }
+}

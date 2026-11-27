@@ -5,6 +5,8 @@ import 'package:squirrel_stash/database/seed_data.dart';
 import 'package:squirrel_stash/database/sqlite_stash_repository.dart';
 import 'package:squirrel_stash/models/app_settings.dart';
 import 'package:squirrel_stash/models/bill.dart';
+import 'package:squirrel_stash/models/bird.dart';
+import 'package:squirrel_stash/models/expedition.dart';
 import 'package:squirrel_stash/models/feat.dart';
 import 'package:squirrel_stash/models/holding.dart';
 import 'package:squirrel_stash/models/impulse.dart';
@@ -18,7 +20,7 @@ void main() {
         options: OpenDatabaseOptions(version: version, onCreate: Schema.create, singleInstance: false),
       );
 
-  group('v2 schema', () {
+  group('current schema', () {
     late SqliteStashRepository repo;
     setUp(() async => repo = SqliteStashRepository(await open(Schema.version)));
     tearDown(() => repo.close());
@@ -44,6 +46,29 @@ void main() {
       expect(loaded.groceries.length, demo.groceries.length);
       expect(loaded.rides.length, demo.rides.length);
       expect(loaded.awards.length, demo.awards.length);
+      expect(loaded.expeditions.where((e) => e.active).single.route, ExpeditionRoute.ridgeTrek);
+      expect(loaded.seedBags[SeedKind.sunflowerMillet], 2);
+      expect(loaded.birdLog.firstWhere((b) => b.species == BirdSpecies.chickadee).visits, 104);
+      expect(loaded.decor.every((d) => d.owned), isTrue);
+    });
+
+    test('expeditions, seed bags and the logbook upsert in place', () async {
+      final now = DateTime(2026, 11, 27, 10);
+      await repo.replaceAll(SeedData.fresh(now));
+      final e = Expedition(id: 'exp_1', route: ExpeditionRoute.meadowDash, startedAt: now,
+          endsAt: now.add(const Duration(hours: 2)), acorns: 40);
+      await repo.upsertExpedition(e);
+      await repo.upsertExpedition(e.collect(now.add(const Duration(hours: 2))));
+      await repo.putSeedBags(SeedKind.goldenHusk, 3);
+      await repo.putSeedBags(SeedKind.goldenHusk, 2);
+      final visit = BirdVisit(BirdSpecies.baldEagle, now, LureKind.deluxeFeast);
+      await repo.upsertBirdLog([BirdLogEntry.first(visit)]);
+      await repo.upsertBirdLog([BirdLogEntry.first(visit).withVisit(visit)]);
+      final loaded = await repo.loadAll();
+      expect(loaded.expeditions.single.collected, isTrue);
+      expect(loaded.seedBags, {SeedKind.goldenHusk: 2});
+      final eagle = loaded.birdLog.single;
+      expect((eagle.visits, eagle.favoriteLure), (2, LureKind.deluxeFeast));
     });
 
     test('statements are unique per bill & month; awards per feat & period', () async {
@@ -63,7 +88,7 @@ void main() {
     });
   });
 
-  test('v1 → v2 migration keeps data and splits the reserves', () async {
+  test('v1 → v2 → current migration keeps data and splits the reserves', () async {
     final db = await open(1);
     await db.insert('settings', {'key': 'golden_leaves', 'value': '45'});
     await db.insert('settings', {'key': 'checking_cents', 'value': '605000'});
@@ -82,7 +107,7 @@ void main() {
     await db.insert('impulse_logs', {'id': 'l1', 'label': 'Tacos', 'mode': 'diy', 'amount_cents': 1200, 'logged_at': '2026-11-01T12:00:00.000', 'swept': 0});
     await db.insert('impulse_logs', {'id': 'l0', 'label': 'Summer', 'mode': 'skip', 'amount_cents': 128000, 'logged_at': '2025-07-01T12:00:00.000', 'swept': 1});
 
-    await Schema.upgrade(db, 1, 2);
+    await Schema.upgrade(db, 1, Schema.version);
     final repo = SqliteStashRepository(db);
     final loaded = await repo.loadAll();
     final reserves = {for (final h in loaded.holdings) h.id: h.reserve};
@@ -107,6 +132,29 @@ void main() {
       ImpulseLog(id: 'l2', label: 'x', mode: ImpulseMode.skip, amountCents: 1, loggedAt: DateTime(2026), habitId: 'c1'),
     ]);
     expect((await repo.loadAll()).logs.any((l) => l.habitId == 'c1'), isTrue);
+    await repo.close();
+  });
+
+  test('v2 → v3 migration frees the looks, grandfathers the Granary, adds colony tables', () async {
+    final db = await open(2);
+    await db.insert('settings', {'key': 'acorns', 'value': '7000'});
+    await db.insert('settings', {'key': 'ambient_track', 'value': 'breeze'});
+    await db.insert('decor', {'key': 'fairyLights', 'owned': 0, 'enabled': 0});
+    await db.insert('decor', {'key': 'hats', 'owned': 1, 'enabled': 1});
+    await Schema.upgrade(db, 2, 3);
+    final repo = SqliteStashRepository(db);
+    final loaded = await repo.loadAll();
+    expect(loaded.decor.every((d) => d.owned), isTrue);
+    expect(loaded.decor.firstWhere((d) => d.key.name == 'fairyLights').enabled, isFalse, reason: 'free, not forced on');
+    final settings = AppSettings.fromMap(loaded.settings);
+    expect((settings.granaryLevel, settings.granaryCap), (3, 10000));
+    expect(settings.acorns, 7000, reason: 'nothing is taken away');
+    expect(loaded.settings.containsKey('ambient_track'), isFalse);
+    expect(loaded.expeditions, isEmpty);
+    expect(loaded.seedBags, isEmpty);
+    expect(loaded.birdLog, isEmpty);
+    await repo.putSeedBags(SeedKind.berryHickory, 1);
+    expect((await repo.loadAll()).seedBags, {SeedKind.berryHickory: 1});
     await repo.close();
   });
 }

@@ -1,7 +1,10 @@
 import 'dart:convert';
 
 import '../models/bill.dart';
+import '../models/bird.dart';
+import '../models/colony_economy.dart';
 import '../models/decor.dart';
+import '../models/expedition.dart';
 import '../models/feat.dart';
 import '../models/goal.dart';
 import '../models/grocery_trip.dart';
@@ -54,7 +57,30 @@ abstract final class BackupCodec {
 
   /// Row-map upgrades keyed by the schema version they upgrade *to*. Each
   /// receives the `tables` object and returns it in that version's shape.
-  static const Map<int, Map<String, Object?> Function(Map<String, Object?>)> _upgrades = {};
+  static const Map<int, Map<String, Object?> Function(Map<String, Object?>)> _upgrades = {3: _toV3};
+
+  /// v2 → v3: every Grand Tree look becomes owned (no more paywalls), the
+  /// Granary starts at the level the balance needs, and the retired ambient
+  /// track setting is dropped. The new tables simply start empty.
+  static Map<String, Object?> _toV3(Map<String, Object?> t) {
+    final settings = t['settings'];
+    final decor = t['decor'];
+    return {
+      ...t,
+      if (settings is Map<String, Object?>)
+        'settings': {
+          for (final e in settings.entries)
+            if (e.key != 'ambient_track') e.key: e.value,
+          if (!settings.containsKey('granary_level'))
+            'granary_level':
+                '${ColonyEconomy.granaryLevelFor(int.tryParse('${settings['acorns'] ?? ''}') ?? 0)}',
+        },
+      if (decor is List)
+        'decor': [
+          for (final row in decor) row is Map<String, Object?> ? {...row, 'owned': 1} : row,
+        ],
+    };
+  }
 
   static String fileName(DateTime day) {
     String two(int n) => n.toString().padLeft(2, '0');
@@ -82,6 +108,9 @@ abstract final class BackupCodec {
         'groceries': rows(s.groceries, (e) => e.toMap()),
         'rides': rows(s.rides, (e) => e.toMap()),
         'awards': rows(s.awards, (e) => e.toMap()),
+        'expeditions': rows(s.expeditions, (e) => e.toMap()),
+        'seedBags': [for (final e in s.seedBags.entries) {'seed': e.key.name, 'bags': e.value}],
+        'birdLog': rows(s.birdLog, (e) => e.toMap()),
       },
     };
   }
@@ -162,6 +191,13 @@ abstract final class BackupCodec {
       groceries: rows('groceries', GroceryTrip.fromMap),
       rides: rows('rides', MetroRide.fromMap),
       awards: rows('awards', FeatAward.fromMap),
+      // Unknown (retired) routes, seeds and species are skipped.
+      expeditions: rows('expeditions', Expedition.fromMap).nonNulls.toList(),
+      seedBags: {
+        for (final (seed, bags) in rows('seedBags', (m) => (SeedKind.tryParse(m['seed'] as String?), (m['bags'] as num).toInt())))
+          ?seed: bags,
+      },
+      birdLog: rows('birdLog', BirdLogEntry.fromMap).nonNulls.toList(),
     );
   }
 
@@ -190,6 +226,7 @@ abstract final class BackupCodec {
       n(s.groceries.length, 'grocery trip'),
       n(s.rides.length, 'metro ride'),
       n(s.awards.length, 'award'),
+      n(s.birdLog.fold(0, (sum, b) => sum + b.visits), 'bird visit'),
     ].join(' · ');
   }
 }
