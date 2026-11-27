@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'app.dart';
 import 'database/stash_database.dart';
+import 'providers/art_assets_provider.dart';
 import 'providers/repository_providers.dart';
 import 'theme/app_colors.dart';
 
@@ -22,11 +23,13 @@ Future<void> main() async {
   // before the first frame so every notifier starts with real data.
   final repository = await StashDatabase.openRepository();
   final snapshot = await repository.loadAll();
+  final icons = await loadIconAssets();
 
   runApp(ProviderScope(
     overrides: [
       stashRepositoryProvider.overrideWithValue(repository),
       initialSnapshotProvider.overrideWithValue(snapshot),
+      artAssetsProvider.overrideWithValue(icons),
     ],
     child: const SquirrelStashApp(),
   ));

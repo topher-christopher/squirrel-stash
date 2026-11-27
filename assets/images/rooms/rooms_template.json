@@ -1,0 +1,21 @@
+{
+  "_doc": "Optional hand-drawn room interiors. Save <room>.png in this folder and the Great Oak draws it inside that room instead of the procedural art (squirrels and effects still animate on top). Rebuild after adding files. The world is 600 x 1150 units; export at 4x the box size for crisp zoom (max zoom is 2.8x).",
+  "format": "PNG, transparent or opaque, sRGB",
+  "rooms": {
+    "treasury.png":   { "box": { "x": 205, "y": 92,   "w": 190, "h": 118 }, "use": "Canopy Treasury (Free Cash pile, Treat lantern)" },
+    "outfitter.png":  { "box": { "x": 48,  "y": 256,  "w": 298, "h": 150 }, "use": "Acorn Outfitter (hero)" },
+    "lab.png":        { "box": { "x": 382, "y": 256,  "w": 170, "h": 150 }, "use": "Foraging & Willpower Lab" },
+    "trophyHall.png": { "box": { "x": 46,  "y": 420,  "w": 300, "h": 150 }, "use": "Trophy Hall (hero)" },
+    "billVault.png":  { "box": { "x": 382, "y": 420,  "w": 172, "h": 150 }, "use": "Hollow Log Bill Vault (Etch A Sketch drawn on top)" },
+    "kitchen.png":    { "box": { "x": 44,  "y": 584,  "w": 302, "h": 150 }, "use": "Squirrel Kitchen (hero)" },
+    "goals.png":      { "box": { "x": 382, "y": 584,  "w": 174, "h": 150 }, "use": "Goal Chambers (chests drawn on top)" },
+    "metro.png":      { "box": { "x": 26,  "y": 794,  "w": 548, "h": 132 }, "use": "DC Metro Station (hero; trains drawn on top)" },
+    "brokerage.png":  { "box": { "x": 30,  "y": 948,  "w": 126, "h": 92 },  "use": "Vault pocket" },
+    "pokemon.png":    { "box": { "x": 168, "y": 948,  "w": 126, "h": 92 },  "use": "Vault pocket" },
+    "crypto.png":     { "box": { "x": 306, "y": 948,  "w": 126, "h": 92 },  "use": "Vault pocket" },
+    "espp.png":       { "box": { "x": 444, "y": 948,  "w": 126, "h": 92 },  "use": "Vault pocket" },
+    "hysa.png":       { "box": { "x": 99,  "y": 1050, "w": 126, "h": 92 },  "use": "Vault pocket" },
+    "retirement.png": { "box": { "x": 237, "y": 1050, "w": 126, "h": 92 },  "use": "Vault pocket" },
+    "silver.png":     { "box": { "x": 375, "y": 1050, "w": 126, "h": 92 },  "use": "Vault pocket" }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "_doc": "Optional custom icons. Save any of these PNGs here (square, transparent, 256x256 recommended) and the app uses them instead of the built-in painted icons. Rebuild after adding files.",
+  "currency": {
+    "acorn.png": "Acorn counter (HUD, rewards, shop prices)",
+    "golden_acorn.png": "Golden Acorn counter"
+  },
+  "rooms": {
+    "_note": "Room medallions shown on the zoomed-out tree. File name = room key.",
+    "files": ["treasury.png", "outfitter.png", "lab.png", "trophyHall.png", "billVault.png", "kitchen.png", "goals.png", "metro.png", "brokerage.png", "pokemon.png", "crypto.png", "espp.png", "hysa.png", "retirement.png", "silver.png"]
+  }
+}

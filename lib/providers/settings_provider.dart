@@ -6,7 +6,7 @@ import 'repository_providers.dart';
 final settingsProvider =
     NotifierProvider<SettingsNotifier, AppSettings>(SettingsNotifier.new);
 
-/// Scalar settings: checking balance, Golden Leaves, Warm Hearth, scene, …
+/// Scalar settings: checking balance, Acorns, Warm Hearth, Cozy Zen, …
 class SettingsNotifier extends Notifier<AppSettings> {
   @override
   AppSettings build() =>
@@ -32,9 +32,14 @@ class SettingsNotifier extends Notifier<AppSettings> {
   void setChecking(int cents) =>
       update((s) => s.copyWith(checkingCents: cents < 0 ? 0 : cents));
 
-  void addLeaves(int delta) => update((s) {
-        final next = s.goldenLeaves + delta;
-        return s.copyWith(goldenLeaves: next < 0 ? 0 : next);
+  void addAcorns(int delta) => update((s) {
+        final next = s.acorns + delta;
+        return s.copyWith(acorns: next < 0 ? 0 : next);
+      });
+
+  void addGolden(int delta) => update((s) {
+        final next = s.goldenAcorns + delta;
+        return s.copyWith(goldenAcorns: next < 0 ? 0 : next);
       });
 
   /// Warm Hearth never cools down — it only grows (non-punitive streak).

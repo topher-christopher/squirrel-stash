@@ -1,15 +1,19 @@
-/// Golden Leaf cosmetic decor. Strictly cosmetic currency — never USD.
+/// Grand Tree upgrades, bought with Acorns + Golden Acorns. Strictly
+/// cosmetic currency — never mixed with real USD.
 enum DecorKey {
-  fairyLights('✨', 'Study Fairy Lights', 20),
-  twilightSky('🌌', 'Twilight Firefly Window', 35),
-  hats('🎓', 'Chef & Scholar Hats', 25),
-  espressoBar('☕', 'Desk Espresso Press', 40);
+  lanternBeacon('Treat Lantern Beacon',
+      'Projects the Green / Yellow / Red Treat lantern onto the canopy birdhouse', 400, 1),
+  fairyLights('Canopy Fairy Lights', 'Twinkling garlands strung between the branches', 250, 0),
+  twilightSky('Twilight Firefly Sky', 'Starry dusk sky with drifting fireflies', 500, 1),
+  seasonalFoliage('Seasonal Foliage', 'The crown follows the real seasons — blossoms to snowy boughs', 600, 2),
+  hats('Colony Outfits', 'Knight helms, beanies, aviator goggles & banker visors for everyone', 350, 1);
 
-  const DecorKey(this.emoji, this.label, this.cost);
+  const DecorKey(this.label, this.blurb, this.acornCost, this.goldenCost);
 
-  final String emoji;
   final String label;
-  final int cost;
+  final String blurb;
+  final int acornCost;
+  final int goldenCost;
 
   static DecorKey? tryParse(String? raw) {
     for (final k in values) {
@@ -19,7 +23,7 @@ enum DecorKey {
   }
 }
 
-/// Ownership is permanent; [enabled] toggles whether the decor is shown.
+/// Ownership is permanent; [enabled] toggles whether the upgrade is shown.
 class DecorItemState {
   const DecorItemState({
     required this.key,

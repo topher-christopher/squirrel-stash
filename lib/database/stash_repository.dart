@@ -1,8 +1,12 @@
 import '../models/bill.dart';
 import '../models/decor.dart';
+import '../models/feat.dart';
 import '../models/goal.dart';
+import '../models/grocery_trip.dart';
+import '../models/habit.dart';
 import '../models/holding.dart';
 import '../models/impulse.dart';
+import '../models/metro_ride.dart';
 import '../models/stash_snapshot.dart';
 import '../models/trophy.dart';
 
@@ -19,21 +23,32 @@ abstract interface class StashRepository {
   Future<void> upsertBill(Bill bill);
   Future<void> deleteBill(String id);
 
+  Future<void> upsertStatement(BillStatement statement);
+  Future<void> deleteStatement(String id);
+
   Future<void> upsertGoal(Goal goal);
   Future<void> deleteGoal(String id);
 
   Future<void> upsertTrophy(Trophy trophy);
 
-  Future<void> upsertChip(ImpulseChip chip);
-  Future<void> deleteChip(String id);
+  Future<void> upsertHabit(Habit habit);
+  Future<void> deleteHabit(String id);
 
   Future<void> upsertLogs(List<ImpulseLog> logs);
   Future<void> deleteLog(String id);
 
-  Future<void> upsertHolding(Holding holding);
+  Future<void> upsertHoldings(List<Holding> holdings);
   Future<void> deleteHolding(String id);
 
   Future<void> upsertDecor(DecorItemState decor);
+
+  Future<void> upsertGrocery(GroceryTrip trip);
+  Future<void> deleteGrocery(String id);
+
+  Future<void> upsertRide(MetroRide ride);
+  Future<void> deleteRide(String id);
+
+  Future<void> upsertAwards(List<FeatAward> awards);
 
   Future<void> close();
 }

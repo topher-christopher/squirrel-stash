@@ -1,19 +1,23 @@
-import 'window_scene.dart';
+import 'ambient_track.dart';
 
 /// Scalar app state persisted in the `settings` key-value table.
-/// Checking balance, Golden Leaves and Warm Hearth live here because they
-/// are single values rather than collections.
+/// Checking balance, the Acorn economy and Warm Hearth live here because
+/// they are single values rather than collections.
 class AppSettings {
   const AppSettings({
     this.checkingCents = 0,
-    this.goldenLeaves = 0,
+    this.acorns = 0,
+    this.goldenAcorns = 0,
+    this.goldenSavingsMilestones = 0,
     this.hearthWarmth = 1,
-    this.scene = WindowScene.meadow,
     this.zenMode = false,
+    this.privacyMode = false,
     this.hootGreetedOn = '',
-    this.brokerageApyBps = 460,
     this.paydayCents = 120000,
+    this.lastPaydayOn = '',
     this.focusIntention = 'Deep Work & Study Sprint',
+    this.focusShiftsCompleted = 0,
+    this.focusMinutesTotal = 0,
     this.ambientOn = false,
     this.ambientTrack = AmbientTrack.campfire,
     this.sfxOn = true,
@@ -21,20 +25,36 @@ class AppSettings {
   });
 
   final int checkingCents;
-  final int goldenLeaves;
+
+  /// Everyday cosmetic currency: 10 per $1 of willpower saved + Focus Shifts.
+  final int acorns;
+
+  /// Rare cosmetic currency: 1 per $100 cumulative willpower savings, 1 per
+  /// reclaimed goal, plus seasonal and ladder milestones. Never real USD.
+  final int goldenAcorns;
+
+  /// How many $100 willpower milestones have already paid a Golden Acorn
+  /// (so undoing and re-logging a win never pays twice).
+  final int goldenSavingsMilestones;
 
   /// 1 = Embers (1.0x), 2 = Hearth (1.25x), 3 = Blaze (1.5x).
   final int hearthWarmth;
-  final WindowScene scene;
+
+  /// Cozy Zen: hides HUD chrome and room icons so the tree is pure ambience.
   final bool zenMode;
+
+  /// Privacy Eye: masks dollar amounts on the HUD and tree.
+  final bool privacyMode;
 
   /// `yyyy-mm-dd` of the last Professor Hoot gift (one gift per day).
   final String hootGreetedOn;
-
-  /// Amber Reserve APY in basis points (460 = 4.60%).
-  final int brokerageApyBps;
   final int paydayCents;
+
+  /// `yyyy-mm-dd` of the last +Payday tap (Double Harvest feat).
+  final String lastPaydayOn;
   final String focusIntention;
+  final int focusShiftsCompleted;
+  final int focusMinutesTotal;
   final bool ambientOn;
   final AmbientTrack ambientTrack;
   final bool sfxOn;
@@ -52,18 +72,20 @@ class AppSettings {
         _ => '1.0x Embers',
       };
 
-  double get apyFraction => brokerageApyBps / 10000;
-
   AppSettings copyWith({
     int? checkingCents,
-    int? goldenLeaves,
+    int? acorns,
+    int? goldenAcorns,
+    int? goldenSavingsMilestones,
     int? hearthWarmth,
-    WindowScene? scene,
     bool? zenMode,
+    bool? privacyMode,
     String? hootGreetedOn,
-    int? brokerageApyBps,
     int? paydayCents,
+    String? lastPaydayOn,
     String? focusIntention,
+    int? focusShiftsCompleted,
+    int? focusMinutesTotal,
     bool? ambientOn,
     AmbientTrack? ambientTrack,
     bool? sfxOn,
@@ -71,14 +93,19 @@ class AppSettings {
   }) =>
       AppSettings(
         checkingCents: checkingCents ?? this.checkingCents,
-        goldenLeaves: goldenLeaves ?? this.goldenLeaves,
+        acorns: acorns ?? this.acorns,
+        goldenAcorns: goldenAcorns ?? this.goldenAcorns,
+        goldenSavingsMilestones:
+            goldenSavingsMilestones ?? this.goldenSavingsMilestones,
         hearthWarmth: hearthWarmth ?? this.hearthWarmth,
-        scene: scene ?? this.scene,
         zenMode: zenMode ?? this.zenMode,
+        privacyMode: privacyMode ?? this.privacyMode,
         hootGreetedOn: hootGreetedOn ?? this.hootGreetedOn,
-        brokerageApyBps: brokerageApyBps ?? this.brokerageApyBps,
         paydayCents: paydayCents ?? this.paydayCents,
+        lastPaydayOn: lastPaydayOn ?? this.lastPaydayOn,
         focusIntention: focusIntention ?? this.focusIntention,
+        focusShiftsCompleted: focusShiftsCompleted ?? this.focusShiftsCompleted,
+        focusMinutesTotal: focusMinutesTotal ?? this.focusMinutesTotal,
         ambientOn: ambientOn ?? this.ambientOn,
         ambientTrack: ambientTrack ?? this.ambientTrack,
         sfxOn: sfxOn ?? this.sfxOn,
@@ -87,14 +114,18 @@ class AppSettings {
 
   Map<String, String> toMap() => {
         'checking_cents': '$checkingCents',
-        'golden_leaves': '$goldenLeaves',
+        'acorns': '$acorns',
+        'golden_acorns': '$goldenAcorns',
+        'golden_savings_milestones': '$goldenSavingsMilestones',
         'hearth_warmth': '$hearthWarmth',
-        'window_scene': scene.name,
         'zen_mode': zenMode ? '1' : '0',
+        'privacy_mode': privacyMode ? '1' : '0',
         'hoot_greeted_on': hootGreetedOn,
-        'brokerage_apy_bps': '$brokerageApyBps',
         'payday_cents': '$paydayCents',
+        'last_payday_on': lastPaydayOn,
         'focus_intention': focusIntention,
+        'focus_shifts_completed': '$focusShiftsCompleted',
+        'focus_minutes_total': '$focusMinutesTotal',
         'ambient_on': ambientOn ? '1' : '0',
         'ambient_track': ambientTrack.name,
         'sfx_on': sfxOn ? '1' : '0',
@@ -106,16 +137,26 @@ class AppSettings {
     int i(String k, int fallback) => int.tryParse(m[k] ?? '') ?? fallback;
     bool b(String k, bool fallback) =>
         m.containsKey(k) ? m[k] == '1' : fallback;
+    // v1 → v1.1: retired Golden Leaves convert to Acorns at 10 : 1.
+    final legacyLeaves = int.tryParse(m['golden_leaves'] ?? '');
+    final acorns = m.containsKey('acorns')
+        ? i('acorns', d.acorns)
+        : (legacyLeaves ?? 0) * 10;
     return AppSettings(
       checkingCents: i('checking_cents', d.checkingCents),
-      goldenLeaves: i('golden_leaves', d.goldenLeaves),
+      acorns: acorns,
+      goldenAcorns: i('golden_acorns', d.goldenAcorns),
+      goldenSavingsMilestones:
+          i('golden_savings_milestones', d.goldenSavingsMilestones),
       hearthWarmth: i('hearth_warmth', d.hearthWarmth).clamp(1, 3),
-      scene: WindowScene.parse(m['window_scene']),
       zenMode: b('zen_mode', d.zenMode),
+      privacyMode: b('privacy_mode', d.privacyMode),
       hootGreetedOn: m['hoot_greeted_on'] ?? d.hootGreetedOn,
-      brokerageApyBps: i('brokerage_apy_bps', d.brokerageApyBps),
       paydayCents: i('payday_cents', d.paydayCents),
+      lastPaydayOn: m['last_payday_on'] ?? d.lastPaydayOn,
       focusIntention: m['focus_intention'] ?? d.focusIntention,
+      focusShiftsCompleted: i('focus_shifts_completed', d.focusShiftsCompleted),
+      focusMinutesTotal: i('focus_minutes_total', d.focusMinutesTotal),
       ambientOn: b('ambient_on', d.ambientOn),
       ambientTrack: AmbientTrack.parse(m['ambient_track']),
       sfxOn: b('sfx_on', d.sfxOn),

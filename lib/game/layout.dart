@@ -1,70 +1,69 @@
 import 'dart:ui';
 
-/// World coordinates of the 1-Screen Hollow Oak Study (440 × 820 units,
-/// identical to the blueprint's viewBox). The Flame world and the Flutter
-/// plaque/hotspot overlay share this space.
-abstract final class StudyLayout {
-  static const double width = 440;
-  static const double height = 820;
+import '../models/room.dart';
+
+/// World coordinates of the unified Great Oak cutaway (600 × 1150 units):
+/// sunlit canopy → lively trunk → underground root tunnels. The Flame world
+/// and the Flutter icon/plaque overlay share this space.
+abstract final class TreeLayout {
+  static const double width = 600;
+  static const double height = 1150;
   static const Size size = Size(width, height);
 
   // Bands
-  static const double wallBottom = 390;
-  static const double deskTop = 376;
-  static const double deskFront = 418;
-  static const double cellarTop = 512;
+  static const double trunkTop = 236;
+  static const double groundY = 768;
+  static const double canopyBottom = 250;
 
-  // Arched window
-  static const Rect windowRect = Rect.fromLTRB(38, 20, 402, 380);
-  static const double archSpring = 155;
-
-  static Path archPath() => Path()
-    ..moveTo(38, 380)
-    ..lineTo(38, archSpring)
-    ..arcToPoint(const Offset(402, archSpring),
-        radius: const Radius.elliptical(182, 135))
-    ..lineTo(402, 380)
+  /// Bark silhouette: narrower at the crown, flaring at the roots.
+  static Path trunkPath() => Path()
+    ..moveTo(52, trunkTop)
+    ..cubicTo(40, 420, 34, 640, 14, groundY + 6)
+    ..lineTo(586, groundY + 6)
+    ..cubicTo(566, 640, 560, 420, 548, trunkTop)
     ..close();
 
-  // Window anchors
-  static const Offset cashPile = Offset(212, 356);
-  static const Offset campfire = Offset(332, 356);
-  static const Offset hoot = Offset(105, 174);
+  // Central acorn-pulley lift
+  static const Offset pulley = Offset(364, 226);
+  static const double shaftLeft = 352;
+  static const double shaftRight = 376;
+  static const double shaftBottom = 924;
+  static const double shaftX = 364;
 
-  // Desk instrument origins (top-left of each instrument group)
-  static const Offset silo = Offset(22, 326);
-  static const Offset lantern = Offset(136, 336);
-  static const Offset clock = Offset(242, 336);
-  static const Offset trophies = Offset(342, 344);
+  /// Lift stops (basket floor y) — one per trunk floor plus the Metro.
+  static const List<double> liftStops = [404, 568, 732, 922];
 
-  static const Offset siloTop = Offset(49, 334);
-  static const Offset lanternCenter = Offset(182, 392);
-  static const Offset clockCenter = Offset(286, 388);
-  static const Offset trophyShelf = Offset(381, 408);
+  static const Map<RoomKey, Rect> rooms = {
+    RoomKey.treasury: Rect.fromLTWH(205, 92, 190, 118),
+    RoomKey.outfitter: Rect.fromLTWH(48, 256, 298, 150),
+    RoomKey.lab: Rect.fromLTWH(382, 256, 170, 150),
+    RoomKey.trophyHall: Rect.fromLTWH(46, 420, 300, 150),
+    RoomKey.billVault: Rect.fromLTWH(382, 420, 172, 150),
+    RoomKey.kitchen: Rect.fromLTWH(44, 584, 302, 150),
+    RoomKey.goals: Rect.fromLTWH(382, 584, 174, 150),
+    RoomKey.metro: Rect.fromLTWH(26, 794, 548, 132),
+    RoomKey.brokerage: Rect.fromLTWH(30, 948, 126, 92),
+    RoomKey.pokemon: Rect.fromLTWH(168, 948, 126, 92),
+    RoomKey.crypto: Rect.fromLTWH(306, 948, 126, 92),
+    RoomKey.espp: Rect.fromLTWH(444, 948, 126, 92),
+    RoomKey.hysa: Rect.fromLTWH(99, 1050, 126, 92),
+    RoomKey.retirement: Rect.fromLTWH(237, 1050, 126, 92),
+    RoomKey.silver: Rect.fromLTWH(375, 1050, 126, 92),
+  };
 
-  // Root cellar
-  static const Rect chute = Rect.fromLTWH(208, 512, 24, 156);
-  static const List<Rect> chambers = [
-    Rect.fromLTWH(16, 540, 186, 112),
-    Rect.fromLTWH(238, 540, 186, 112),
+  static Rect room(RoomKey key) => rooms[key]!;
+
+  /// Display pedestals on the grassy terrace at the trunk's base.
+  static const List<Offset> pedestals = [
+    Offset(86, 774), Offset(170, 774), Offset(448, 774), Offset(526, 774),
   ];
-  static const List<Rect> reserves = [
-    Rect.fromLTWH(16, 686, 130, 118),
-    Rect.fromLTWH(155, 686, 130, 118),
-    Rect.fromLTWH(294, 686, 130, 118),
-  ];
-  static const double patrolY = 776;
 
-  /// Chest position inside a chamber rect.
-  static Offset chestIn(Rect chamber) =>
-      Offset(chamber.left + 30, chamber.top + 78);
+  // Canopy residents
+  static const Offset beacon = Offset(96, 204);
+  static const Offset hoot = Offset(510, 166);
+  static const Rect hootHotspot = Rect.fromLTWH(488, 140, 44, 40);
 
-  // Tap regions (hotspots) in world space
-  static const Rect cashHotspot = Rect.fromLTWH(158, 314, 108, 54);
-  static const Rect campfireHotspot = Rect.fromLTWH(284, 316, 96, 52);
-  static const Rect hootHotspot = Rect.fromLTWH(90, 158, 30, 32);
-  static const Rect siloHotspot = Rect.fromLTWH(16, 318, 114, 175);
-  static const Rect lanternHotspot = Rect.fromLTWH(132, 328, 102, 164);
-  static const Rect clockHotspot = Rect.fromLTWH(238, 328, 96, 164);
-  static const Rect trophyHotspot = Rect.fromLTWH(338, 336, 84, 156);
+  /// Where the camera centers when zoomed to a room (slightly above center
+  /// so the drawer doesn't cover it).
+  static Offset focusPoint(RoomKey key) => room(key).center;
 }

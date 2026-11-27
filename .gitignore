@@ -49,3 +49,8 @@ app.*.map.json
 
 # Local Claude Code preview config (machine-specific paths)
 .claude/launch.json
+
+# Android release signing secrets (never commit these)
+*.jks
+*.keystore
+key.properties

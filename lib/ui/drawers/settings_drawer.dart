@@ -8,6 +8,7 @@ import '../../providers/ui_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../widgets/stash_controls.dart';
+import 'backup_section.dart';
 import 'drawer_shell.dart';
 import 'prompts.dart';
 
@@ -38,19 +39,22 @@ class SettingsDrawer extends ConsumerWidget {
         _Toggle(label: 'Haptics', value: s.hapticsOn, onChanged: (v) => notifier.update((x) => x.copyWith(hapticsOn: v))),
         _Toggle(label: 'Ambient audio', value: s.ambientOn, onChanged: (v) => notifier.update((x) => x.copyWith(ambientOn: v))),
         _Toggle(
-          label: 'Custom art blueprint overlay',
+          label: 'Custom art blueprint (room drop-in slots)',
           value: blueprint,
           onChanged: (_) => ref.read(uiProvider.notifier).toggleBlueprint(),
         ),
+        const SectionLabel('Backup & restore'),
+        const BackupSection(),
+        const SizedBox(height: 16),
         const SectionLabel('Your data'),
         PillButton(
-          label: '🌳 Restore demo hollow',
+          label: '🌳 Restore demo Great Oak',
           outlined: true,
           color: AppColors.honey,
           expand: true,
           onPressed: () async {
             final ok = await confirmAction(context,
-                title: 'Restore the demo?', message: 'Replaces everything with the sample hollow from the blueprint.',
+                title: 'Restore the demo?', message: 'Replaces everything with the sample Great Oak colony.',
                 confirmLabel: 'Restore', destructive: true);
             if (ok) {
               await actions.restoreDemo();
@@ -66,7 +70,7 @@ class SettingsDrawer extends ConsumerWidget {
           onPressed: () async {
             final ok = await confirmAction(context,
                 title: 'Start fresh?',
-                message: 'Deletes all balances, bills, goals, trophies and logs on this device. This cannot be undone.',
+                message: 'Deletes all balances, statements, goals, trophies, holdings and logs on this device. Your bill presets come back empty. This cannot be undone.',
                 confirmLabel: 'Clear everything', destructive: true);
             if (ok) {
               await actions.startFresh();
@@ -76,7 +80,7 @@ class SettingsDrawer extends ConsumerWidget {
         ),
         const SizedBox(height: 16),
         Text(
-          'SquirrelStash stores everything in a local SQLite database. Golden Leaves are a cosmetic currency and are never mixed with real money.',
+          'SquirrelStash stores everything in a local SQLite database. Acorns and Golden Acorns are cosmetic currencies and are never mixed with real money. Live prices are fetched without any account or API key.',
           style: AppType.body(11.5, color: AppColors.stoneDim, height: 1.4),
         ),
       ],

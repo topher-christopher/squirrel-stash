@@ -152,3 +152,15 @@ class PictureCache {
     _picture = null;
   }
 }
+
+/// Easing curves for hand-rolled animations.
+abstract final class Ease {
+  static double easeInOut(double t) =>
+      t < 0.5 ? 2 * t * t : 1 - math.pow(-2 * t + 2, 2) / 2;
+
+  /// 0→1→0 over one cycle.
+  static double pingPong(double t) {
+    final u = t % 2;
+    return u < 1 ? u : 2 - u;
+  }
+}

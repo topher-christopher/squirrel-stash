@@ -74,14 +74,14 @@ class FxLayer extends DioramaLayer {
     }
   }
 
-  void confetti() {
+  void confetti(Offset at) {
     const colors = [
       Color(0xFFF87171), Color(0xFFFDE047), Color(0xFF4ADE80),
       Color(0xFF38BDF8), Color(0xFFFBBF24), Color(0xFFC084FC),
     ];
     for (var i = 0; i < 90 && _particles.length < _max; i++) {
       _particles.add(_Particle(
-        p: Offset(_rng.nextDouble() * 440, -10 - _rng.nextDouble() * 120),
+        p: Offset(at.dx - 220 + _rng.nextDouble() * 440, at.dy - 10 - _rng.nextDouble() * 120),
         v: Offset((_rng.nextDouble() - 0.5) * 40, 60 + _rng.nextDouble() * 80),
         life: 3.2 + _rng.nextDouble(),
         size: 2.4 + _rng.nextDouble() * 2,

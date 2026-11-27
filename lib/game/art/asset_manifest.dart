@@ -4,7 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
-import '../../models/window_scene.dart';
+import '../../models/room.dart';
 
 /// A horizontal sprite strip for one squirrel pose.
 class SpriteSheetSpec {
@@ -34,8 +34,8 @@ class SpriteSheetSpec {
 /// The custom-artwork drop-in registry (CLAUDE.md "AssetManifest" config).
 ///
 /// At startup it scans Flutter's asset manifest for PNGs in
-///   assets/images/windows/   meadow.png, alpine.png, harbor.png
-///   assets/images/props/     chest_lv1..3.png, acorn.png, frost_overlay.png
+///   assets/images/rooms/     `<room>.png` interiors (see rooms_template.json)
+///   assets/images/props/     chest_lv1..3.png, acorn.png
 ///   assets/sprites/squirrels/ `<pose>.png` described by squirrels.json
 /// and decodes whatever exists. Painters ask for an image and fall back to
 /// procedural art when none is present, so art can be swapped without
@@ -45,7 +45,7 @@ class StashAssetManifest {
 
   static final StashAssetManifest empty = StashAssetManifest._(const {}, const {});
 
-  static const windowDir = 'assets/images/windows/';
+  static const roomDir = 'assets/images/rooms/';
   static const propsDir = 'assets/images/props/';
   static const squirrelDir = 'assets/sprites/squirrels/';
 
@@ -54,9 +54,8 @@ class StashAssetManifest {
 
   bool get isEmpty => _images.isEmpty;
 
-  /// [layer] is '' for the main backdrop, or '_far' / '_near'.
-  ui.Image? window(WindowScene scene, {String layer = ''}) =>
-      _images['$windowDir${scene.name}$layer.png'];
+  /// Hand-drawn room interior, drawn instead of the procedural room art.
+  ui.Image? room(RoomKey key) => _images['$roomDir${key.name}.png'];
 
   ui.Image? prop(String name) => _images['$propsDir$name.png'];
 
@@ -68,7 +67,7 @@ class StashAssetManifest {
       final manifest = await AssetManifest.loadFromAssetBundle(assets);
       final pngs = manifest.listAssets().where((a) =>
           a.endsWith('.png') &&
-          (a.startsWith(windowDir) ||
+          (a.startsWith(roomDir) ||
               a.startsWith(propsDir) ||
               a.startsWith(squirrelDir)));
       final images = <String, ui.Image>{};

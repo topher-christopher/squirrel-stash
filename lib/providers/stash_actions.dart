@@ -10,22 +10,26 @@ import '../core/money.dart';
 import '../database/seed_data.dart';
 import '../game/diorama_event.dart';
 import '../models/decor.dart';
+import '../models/feat.dart';
 import '../models/goal.dart';
-import '../models/impulse.dart';
+import '../models/room.dart';
 import '../models/trophy.dart';
+import 'economy.dart';
 import 'finance_math.dart';
 import 'finance_providers.dart';
 import 'goals_provider.dart';
-import 'impulse_provider.dart';
 import 'repository_providers.dart';
 import 'reserves_provider.dart';
+import 'reward_service.dart';
+import 'rooms_provider.dart';
 import 'settings_provider.dart';
 import 'ui_provider.dart';
 
 final stashActionsProvider = Provider<StashActions>(StashActions.new);
 
-/// User actions that span several domains (cash + goals + trophies + leaves)
-/// and carry the cozy feedback: banners, haptics, chimes, diorama effects.
+/// User actions that span several domains (cash + goals + trophies +
+/// Acorns) and carry the cozy feedback: banners, haptics, chimes, effects.
+/// Willpower, Kitchen and Metro logging live in `WillpowerActions`.
 class StashActions {
   StashActions(this._ref);
 
@@ -34,29 +38,24 @@ class StashActions {
   SettingsNotifier get _settings => _ref.read(settingsProvider.notifier);
   GoalsNotifier get _goals => _ref.read(goalsProvider.notifier);
   UiNotifier get _ui => _ref.read(uiProvider.notifier);
+  RewardService get _rewards => _ref.read(rewardServiceProvider);
   FinanceSummary get _finance => _ref.read(financeProvider);
 
   void _emit(DioramaEvent e) => _ref.read(dioramaEventsProvider).emit(e);
 
-  void _sfx(Sfx sfx) {
-    if (_ref.read(settingsProvider).sfxOn) {
-      _ref.read(audioServiceProvider).play(sfx);
-    }
-  }
-
-  void banner(String text, {String icon = '✨'}) =>
-      _ui.showBanner(text, icon: icon);
+  void banner(String text, {String icon = '✨'}) => _ui.showBanner(text, icon: icon);
 
   // ---------------------------------------------------------------- Cash
   void payday() {
     final amount = _ref.read(settingsProvider).paydayCents;
-    _settings.addChecking(amount);
+    _settings.update((s) => s.copyWith(
+        checkingCents: s.checkingCents + amount, lastPaydayOn: Dates.dayKey(DateTime.now())));
     _ui.startPaydayBurst();
-    _emit(const DioramaEvent(DioramaEventKind.payday));
-    banner('Payday delivery! Squirrels hauled +${Money.whole(amount)} into '
-        'your Free Cash pile!', icon: '🌰');
+    _emit(const DioramaEvent(DioramaEventKind.payday, room: RoomKey.treasury));
+    banner('Payday delivery! Squirrels hauled +${Money.whole(amount)} up to the '
+        'Canopy Treasury!', icon: '🌰');
     Haptics.success();
-    _sfx(Sfx.plink);
+    _rewards.sfx(Sfx.plink);
   }
 
   /// Spending never dips into cash already reserved inside Goal Chambers.
@@ -68,53 +67,6 @@ class StashActions {
 
   void setChecking(int cents) {
     _settings.setChecking(cents);
-    Haptics.success();
-  }
-
-  // ---------------------------------------------------------- Impulse Lab
-  bool logWin(String label, ImpulseMode mode, int cents) {
-    final clean = label.trim();
-    if (clean.isEmpty || cents <= 0) return false;
-    _ref
-        .read(impulseLogsProvider.notifier)
-        .add(label: clean, mode: mode, amountCents: cents);
-    _settings.warmHearth();
-    _ui.showLabReaction('+${Money.smart(cents)} Saved!');
-    _emit(DioramaEvent(DioramaEventKind.impulseWin, mode: mode));
-    Haptics.success();
-    _sfx(Sfx.plink);
-    return true;
-  }
-
-  bool addChipAndLog(String label, ImpulseMode mode, int cents) {
-    final clean = label.trim();
-    if (clean.isEmpty || cents <= 0) return false;
-    _ref
-        .read(impulseChipsProvider.notifier)
-        .add(label: clean, mode: mode, amountCents: cents);
-    return logWin(clean, mode, cents);
-  }
-
-  void sweepToGoal(String goalId) {
-    final goal = _goals.byId(goalId);
-    if (goal == null) return;
-    final plan = FinanceMath.planSweep(
-        _ref.read(impulseLogsProvider), _finance.freeCashCents, DateTime.now());
-    if (plan.cents <= 0) {
-      final unswept = _ref.read(impulseStatsProvider).unsweptMonthCents;
-      banner(
-          unswept <= 0
-              ? 'No new willpower wins to sweep this month yet.'
-              : 'All checking cash is already allocated to goals!',
-          icon: '🌰');
-      Haptics.warn();
-      return;
-    }
-    _goals.addSaved(goalId, plan.cents);
-    _ref.read(impulseLogsProvider.notifier).markSwept(plan.logIds);
-    _emitAllocate(goalId);
-    banner('Swept ${Money.smart(plan.cents)} of willpower wins straight into '
-        '${goal.name}!', icon: '🧹');
     Haptics.success();
   }
 
@@ -135,8 +87,6 @@ class StashActions {
       priority: priority,
       note: note.isEmpty ? 'Steady acorns fill the chest.' : note,
     );
-    final index = _ref.read(goalsProvider).indexWhere((g) => g.id == goal.id);
-    _ui.setGoalPage(index ~/ 2);
     banner('Squirrels excavated a new chamber for ${goal.name}!', icon: '⛏️');
     Haptics.success();
     return goal;
@@ -146,15 +96,14 @@ class StashActions {
   int allocate(String goalId, int cents) {
     final actual = math.min(_finance.freeCashCents, cents);
     if (actual <= 0) {
-      banner('No free acorns left — every dollar is already stashed.',
-          icon: '🌰');
+      banner('No free acorns left — every dollar is already stashed.', icon: '🌰');
       Haptics.warn();
       return 0;
     }
     _goals.addSaved(goalId, actual);
-    _emitAllocate(goalId);
+    _emit(const DioramaEvent(DioramaEventKind.allocate, room: RoomKey.goals));
     Haptics.success();
-    _sfx(Sfx.plink);
+    _rewards.sfx(Sfx.plink);
     return actual;
   }
 
@@ -166,8 +115,8 @@ class StashActions {
     Haptics.tap();
   }
 
-  /// Seals a 100% chamber: spends its acorns, places a relic on the Trophy
-  /// Stand, grants +25 Golden Leaves and grows the Great Oak.
+  /// Seals a 100% chamber: spends its cash, raises a themed statue in the
+  /// Trophy Hall, pays Acorns + a Golden Acorn and grows the Great Oak.
   Trophy? reclaim(String goalId) {
     final goal = _goals.byId(goalId);
     if (goal == null || !goal.isComplete) return null;
@@ -182,13 +131,16 @@ class StashActions {
       note: goal.note.isEmpty ? 'Milestone conquered and reclaimed!' : goal.note,
     );
     _ref.read(trophiesProvider.notifier).add(trophy);
-    _settings.addLeaves(25);
-    _clampGoalPage();
-    _emit(const DioramaEvent(DioramaEventKind.reclaim));
-    banner('Reclaimed ${goal.name} (${Money.whole(goal.targetCents)})! Added '
-        'trophy to your desk & +25 Golden Leaves!', icon: '🏆');
+    _settings.update((s) => s.copyWith(
+          acorns: s.acorns + Economy.goalReclaimAcorns,
+          goldenAcorns: s.goldenAcorns + Economy.goalReclaimGolden,
+        ));
+    _emit(const DioramaEvent(DioramaEventKind.reclaim, room: RoomKey.trophyHall));
+    banner('Reclaimed ${goal.name} (${Money.whole(goal.targetCents)})! A statue joins the '
+        'Trophy Hall • +${Economy.goalReclaimAcorns} Acorns & +1 Golden Acorn', icon: '🏆');
     Haptics.celebrate();
-    _sfx(Sfx.chime);
+    _rewards.sfx(Sfx.chime);
+    _rewards.evaluateFeats(announce: false);
     return trophy;
   }
 
@@ -197,55 +149,45 @@ class StashActions {
     final goal = _goals.byId(goalId);
     if (goal == null) return;
     _goals.remove(goalId);
-    _clampGoalPage();
-    banner('${goal.name} chamber filled in — ${Money.whole(goal.savedCents)} '
-        'returned to Free Cash.', icon: '🪨');
-  }
-
-  void _clampGoalPage() {
-    final maxPage = FinanceMath.maxGoalPage(_ref.read(goalsProvider).length);
-    if (_ref.read(uiProvider).goalPage > maxPage) _ui.setGoalPage(maxPage);
-  }
-
-  void _emitAllocate(String goalId) {
-    final index = _ref.read(goalsProvider).indexWhere((g) => g.id == goalId);
-    final onPage = index >= 0 && index ~/ 2 == _ref.read(uiProvider).goalPage;
-    _emit(DioramaEvent(DioramaEventKind.allocate, slot: onPage ? index % 2 : null));
+    banner('${goal.name} chamber filled in — ${Money.whole(goal.savedCents)} returned to '
+        'Free Cash.', icon: '🪨');
   }
 
   // ------------------------------------------------------------- Rewards
-  /// Professor Hoot gifts +15 Golden Leaves once per day.
+  /// Professor Hoot gifts Acorns once per day.
   void greetHoot() {
     final today = Dates.dayKey(DateTime.now());
     if (_ref.read(settingsProvider).hootGreetedOn != today) {
-      _settings.update((s) => s.copyWith(
-          hootGreetedOn: today, goldenLeaves: s.goldenLeaves + 15));
+      _settings.update((s) =>
+          s.copyWith(hootGreetedOn: today, acorns: s.acorns + Economy.hootGiftAcorns));
       _emit(const DioramaEvent(DioramaEventKind.hootGift));
-      banner('Professor Hoot tapped on your study window and gifted +15 '
-          'Golden Leaves!', icon: '🦉');
-      Haptics.success();
-      _sfx(Sfx.chime);
-    } else {
-      banner('Professor Hoot hoots approvingly from the oak branch!',
+      banner('Professor Hoot dropped +${Economy.hootGiftAcorns} Acorns from the canopy!',
           icon: '🦉');
+      Haptics.success();
+      _rewards.sfx(Sfx.chime);
+    } else {
+      banner('Professor Hoot hoots approvingly from his branch!', icon: '🦉');
       Haptics.tap();
     }
   }
 
   void awardFocus(int totalSeconds) {
     final warmth = _ref.read(settingsProvider).hearthWarmth;
-    final earned =
-        FinanceMath.focusReward(totalSeconds: totalSeconds, warmth: warmth);
-    _settings.addLeaves(earned);
+    final earned = Economy.focusReward(totalSeconds: totalSeconds, warmth: warmth);
+    _settings.update((s) => s.copyWith(
+          acorns: s.acorns + earned,
+          focusShiftsCompleted: s.focusShiftsCompleted + 1,
+          focusMinutesTotal: s.focusMinutesTotal + (totalSeconds / 60).round(),
+        ));
     _settings.warmHearth();
     _emit(const DioramaEvent(DioramaEventKind.focusComplete));
-    banner('Focus Shift complete! Your study squirrel gathered +$earned '
-        'Golden Leaves!', icon: '🍃');
+    banner('Focus Shift complete! Your study squirrel gathered +$earned Acorns!', icon: '⏳');
     Haptics.celebrate();
-    _sfx(Sfx.chime);
+    _rewards.sfx(Sfx.chime);
+    _rewards.evaluateFeats();
   }
 
-  /// Owned decor toggles on/off; unowned decor costs Golden Leaves once.
+  /// Owned Grand Tree upgrades toggle; unowned ones cost Acorns + Golden.
   void buyOrToggleDecor(DecorKey key) {
     final decor = _ref.read(decorProvider.notifier);
     final item = _ref.read(decorProvider)[key]!;
@@ -254,44 +196,68 @@ class StashActions {
       Haptics.tap();
       return;
     }
-    final leaves = _ref.read(settingsProvider).goldenLeaves;
-    if (leaves < key.cost) {
-      banner('${key.cost - leaves} more Golden Leaves needed for '
-          '${key.label}.', icon: '🍃');
+    final s = _ref.read(settingsProvider);
+    if (s.acorns < key.acornCost || s.goldenAcorns < key.goldenCost) {
+      banner('Not enough yet for ${key.label} — keep foraging!', icon: '🌰');
       Haptics.warn();
       return;
     }
-    _settings.addLeaves(-key.cost);
+    _settings.update((x) => x.copyWith(
+        acorns: x.acorns - key.acornCost, goldenAcorns: x.goldenAcorns - key.goldenCost));
     decor.put(item.copyWith(owned: true, enabled: true));
-    _emit(const DioramaEvent(DioramaEventKind.decor));
-    banner('Unlocked ${key.label}!', icon: key.emoji);
+    _emit(const DioramaEvent(DioramaEventKind.upgrade));
+    banner('Grand Tree upgrade unlocked: ${key.label}!', icon: '🌳');
     Haptics.success();
-    _sfx(Sfx.chime);
+    _rewards.sfx(Sfx.chime);
+  }
+
+  /// Spends Acorns to raise one room's visual level.
+  bool upgradeRoom(RoomKey room) {
+    final rooms = _ref.read(roomsProvider);
+    final level = rooms.levelOf(room);
+    if (level >= RoomLevels.max) return false;
+    final cost = RoomLevels.costFor(level + 1);
+    if (_ref.read(settingsProvider).acorns < cost) {
+      banner('${cost - _ref.read(settingsProvider).acorns} more Acorns to upgrade ${room.title}.',
+          icon: '🌰');
+      Haptics.warn();
+      return false;
+    }
+    _settings.addAcorns(-cost);
+    _ref.read(roomsProvider.notifier).setLevel(room, level + 1);
+    _emit(DioramaEvent(DioramaEventKind.upgrade, room: room));
+    banner('${room.title} upgraded to ${RoomLevels.name(level + 1)}!', icon: '🔨');
+    Haptics.success();
+    _rewards.sfx(Sfx.chime);
+    return true;
   }
 
   // --------------------------------------------------------------- Study
-  void cycleScene() {
-    _settings.update((s) => s.copyWith(scene: s.scene.next));
-    Haptics.tap();
-  }
-
   void toggleZen() {
     _settings.update((s) => s.copyWith(zenMode: !s.zenMode));
     Haptics.light();
   }
 
+  void togglePrivacy() {
+    _settings.update((s) => s.copyWith(privacyMode: !s.privacyMode));
+    Haptics.light();
+  }
+
+  /// Canopy Stargazer: 60 seconds of uninterrupted Cozy Zen.
+  void finishedStargazing() => _rewards.grantMystery(Feats.canopyStargazer);
+
+  /// Window Shopper: swiped through every room in the drawer.
+  void visitedRoom(RoomKey room) {
+    if (_ui.visitRoom(room)) _rewards.grantMystery(Feats.windowShopper);
+  }
+
   Future<void> restoreDemo() async {
-    await _ref
-        .read(stashSnapshotProvider.notifier)
-        .replace(SeedData.demo(DateTime.now()));
-    _ui.setGoalPage(0);
-    banner('Demo hollow restored.', icon: '🌳');
+    await _ref.read(stashSnapshotProvider.notifier).replace(SeedData.demo(DateTime.now()));
+    banner('Demo Great Oak restored.', icon: '🌳');
   }
 
   Future<void> startFresh() async {
     await _ref.read(stashSnapshotProvider.notifier).replace(SeedData.fresh());
-    _ui.setGoalPage(0);
-    banner('A fresh hollow awaits — log your checking balance to begin!',
-        icon: '🌱');
+    banner('A fresh oak awaits — log your checking balance to begin!', icon: '🌱');
   }
 }

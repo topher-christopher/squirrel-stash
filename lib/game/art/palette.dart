@@ -76,6 +76,18 @@ abstract final class Pal {
   static const rail = Color(0xFF92400E);
   static const rung = Color(0xFFB45309);
 
+  // Great Oak bark & hollow
+  static const bark = Color(0xFF5B3418);
+  static const barkDark = Color(0xFF3A1F0D);
+  static const barkLight = Color(0xFF7A4724);
+  static const hollow = Color(0xFF2A160A);
+  static const hollowWarm = Color(0xFF3B210F);
+  static const plank = Color(0xFF7C4A22);
+  static const plankDark = Color(0xFF5C3419);
+  static const grass = Color(0xFF65A30D);
+  static const grassDark = Color(0xFF3F6212);
+  static const tunnel = Color(0xFF231309);
+
   // Impulse sand
   static const sandSkip = Color(0xFF38BDF8);
   static const sandDownsize = Color(0xFF10B981);

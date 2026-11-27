@@ -85,7 +85,7 @@ class FocusNotifier extends Notifier<FocusState> {
     _persist(total: seconds, endsAt: endsAt);
     _startTicker();
     ref.read(stashActionsProvider).banner(
-        'Focus Shift started! Your study squirrel is working beside you.',
+        'Focus Shift started! The colony is studying beside you.',
         icon: '⏳');
     Haptics.success();
   }

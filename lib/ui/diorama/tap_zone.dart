@@ -3,24 +3,25 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/haptics.dart';
 import '../../game/diorama_event.dart';
+import '../../models/room.dart';
 import '../../providers/ui_provider.dart';
 
-/// Invisible tap region over a diorama object. Tapping squash-bounces the
-/// object in the Flame world, plays a light haptic and runs [onTap]. The
+/// Invisible tap region over a tree room or critter. Tapping squash-bounces
+/// the room in the Flame world, plays a light haptic and runs [onTap]. The
 /// optional [child] (a plaque) gets the same tactile press scale.
 class TapZone extends ConsumerStatefulWidget {
   const TapZone({
     super.key,
     required this.onTap,
     required this.label,
-    this.target,
+    this.room,
     this.child,
     this.pressAlignment = Alignment.center,
   });
 
   final VoidCallback onTap;
   final String label;
-  final DioramaTarget? target;
+  final RoomKey? room;
   final Widget? child;
   final Alignment pressAlignment;
 
@@ -47,9 +48,9 @@ class _TapZoneState extends ConsumerState<TapZone> {
         onTapCancel: () => _set(false),
         onTap: () {
           Haptics.light();
-          final target = widget.target;
-          if (target != null) {
-            ref.read(dioramaEventsProvider).emit(DioramaEvent.poke(target));
+          final room = widget.room;
+          if (room != null) {
+            ref.read(dioramaEventsProvider).emit(DioramaEvent.poke(room));
           }
           widget.onTap();
         },
@@ -65,7 +66,7 @@ class _TapZoneState extends ConsumerState<TapZone> {
   }
 }
 
-/// Fades plaques away in Zen Mode (keeps their space).
+/// Fades icons & plaques away in Cozy Zen (keeps their space).
 class ZenFade extends StatelessWidget {
   const ZenFade({super.key, required this.zen, required this.child});
 

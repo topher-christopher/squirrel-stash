@@ -1,17 +1,22 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../core/haptics.dart';
 import '../providers/settings_provider.dart';
+import '../providers/stash_actions.dart';
 import '../providers/ui_provider.dart';
 import '../theme/app_colors.dart';
-import 'diorama/diorama_stage.dart';
+import 'diorama/tree_stage.dart';
 import 'widgets/celebration_banner.dart';
 import 'widgets/frost_vignette.dart';
+import 'widgets/stash_controls.dart';
 import 'widgets/study_hud_pill.dart';
 
-/// The 1-Screen Hollow Oak Study: HUD pill, the living diorama (window,
-/// desk, root cellar), celebration toasts and the full-screen frost vignette.
+/// The Great Oak home screen: the clean top HUD, the zoomable living tree,
+/// celebration toasts, and the full-screen frost vignette. Cozy Zen fades
+/// every control away, leaving only a faint leaf to come back.
 class HomeStudyScreen extends ConsumerStatefulWidget {
   const HomeStudyScreen({super.key});
 
@@ -20,6 +25,8 @@ class HomeStudyScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeStudyScreenState extends ConsumerState<HomeStudyScreen> {
+  Timer? _stargazer;
+
   @override
   void initState() {
     super.initState();
@@ -34,55 +41,82 @@ class _HomeStudyScreenState extends ConsumerState<HomeStudyScreen> {
       (_, on) => Haptics.enabled = on,
       fireImmediately: true,
     );
+    // Canopy Stargazer: a full minute of Cozy Zen.
+    ref.listenManual(
+      settingsProvider.select((s) => s.zenMode),
+      (_, zen) {
+        _stargazer?.cancel();
+        if (zen) {
+          _stargazer = Timer(const Duration(seconds: 60),
+              () => ref.read(stashActionsProvider).finishedStargazing());
+        }
+      },
+      fireImmediately: true,
+    );
+  }
+
+  @override
+  void dispose() {
+    _stargazer?.cancel();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final zen = ref.watch(settingsProvider.select((s) => s.zenMode));
     return Scaffold(
       backgroundColor: AppColors.night,
       body: Stack(children: [
-        const Positioned.fill(child: _Backdrop()),
         SafeArea(
+          bottom: false,
           child: Column(children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(12, 8, 12, 10),
-              child: Center(child: StudyHudPill()),
-            ),
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(10, 0, 10, MediaQuery.paddingOf(context).bottom > 0 ? 4 : 12),
-                child: const DioramaStage(),
+            IgnorePointer(
+              ignoring: zen,
+              child: AnimatedOpacity(
+                opacity: zen ? 0 : 1,
+                duration: const Duration(milliseconds: 450),
+                child: const Padding(
+                  padding: EdgeInsets.fromLTRB(12, 8, 12, 8),
+                  child: Center(child: StudyHud()),
+                ),
               ),
             ),
+            const Expanded(child: TreeStage()),
           ]),
         ),
         const Positioned(
           left: 0,
           right: 0,
           top: 0,
-          child: SafeArea(
-            child: Padding(padding: EdgeInsets.only(top: 64), child: CelebrationBanner()),
-          ),
+          child: SafeArea(child: Padding(padding: EdgeInsets.only(top: 104), child: CelebrationBanner())),
         ),
         const Positioned.fill(child: FrostVignette()),
+        Positioned(
+          top: 0,
+          right: 0,
+          child: SafeArea(
+            child: IgnorePointer(
+              ignoring: !zen,
+              child: AnimatedOpacity(
+                opacity: zen ? 0.55 : 0,
+                duration: const Duration(milliseconds: 450),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: PressScale(
+                    onTap: () => ref.read(stashActionsProvider).toggleZen(),
+                    child: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: const BoxDecoration(color: Color(0x66140C07), shape: BoxShape.circle),
+                      child: const Icon(Icons.spa_rounded, size: 19, color: AppColors.honey),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
       ]),
     );
   }
-}
-
-/// Warm candle-lit glow behind the diorama.
-class _Backdrop extends StatelessWidget {
-  const _Backdrop();
-
-  @override
-  Widget build(BuildContext context) => const DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: RadialGradient(
-            center: Alignment(0, -0.3),
-            radius: 1.1,
-            colors: [Color(0xFF3A2010), Color(0xFF1E1109), AppColors.night],
-            stops: [0, 0.55, 1],
-          ),
-        ),
-      );
 }

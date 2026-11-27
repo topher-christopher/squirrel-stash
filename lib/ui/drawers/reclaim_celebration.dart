@@ -98,11 +98,11 @@ class _Celebration extends StatelessWidget {
                   ]),
                 ),
                 const SizedBox(height: 14),
-                Text('+25 Golden Leaves  •  Great Oak Lv.$oakLevel',
+                Text('+250 Acorns  •  +1 Golden Acorn  •  Great Oak Lv.$oakLevel',
                     style: AppType.body(13, weight: FontWeight.w800, color: AppColors.leaf)),
                 const SizedBox(height: 16),
                 PillButton(
-                  label: 'Place on Trophy Stand',
+                  label: 'Raise the Statue',
                   expand: true,
                   color: AppColors.amberBright,
                   onPressed: () => Navigator.of(context).pop(),

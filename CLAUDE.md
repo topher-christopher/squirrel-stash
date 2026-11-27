@@ -12,50 +12,34 @@ Do **NOT** use React, Next.js, Vue, HTML/CSS/SVG DOM rendering, or Electron. Bui
 - **Primary Framework:** **Flutter (Dart)** — single codebase compiling natively to iOS, Android, macOS, and Windows.
 - **2D Living Diorama Engine:** **Flame (`flame` package)** embedded directly inside the Flutter widget tree to power the 60fps autonomous squirrels, layered parallax scenery, weather/frost shaders, particle effects, and custom sprite sheets.
 - **Local Persistence:** **SQLite (`drift` or `sqflite`)** so all bank balances, bills, goal chambers, reclaimed trophies, custom temptation chips, impulse logs, and Golden Leaf unlocks persist permanently on-device without requiring a cloud account.
+- **Live Market Prices:** **`http`** only, zero API keys (CoinGecko simple price + Yahoo Finance chart JSON), cached in SQLite for offline fallback.
 - **Audio Engine:** **`audioplayers`** (or procedural/bundled loopable `.ogg`/`.wav` stems) for toggleable campfire crackle, forest breeze, and chime feedback during Focus Shifts.
 - **State Management:** **Riverpod (`flutter_riverpod`)** or clean Bloc/ChangeNotifier architecture separating financial math, game simulation state, and UI drawers.
 
 ---
 
-## 3. Core Visual Architecture: "The 1-Screen Hollow Oak Study"
-Preserve the exact spatial hierarchy and zero-box diegetic philosophy established in `GEMINI_PROTOTYPE.txt`:
+## 3. Core Visual Architecture: "The Great Oak Colony" (v1.1)
+One continuous, zoomable **Fallout Shelter-style cutaway of the Great Oak** (sunlit canopy → lively trunk → underground root tunnels) in a fixed **600 × 1150** Flame world (`lib/game/layout.dart`), hosted in an `InteractiveViewer` (min `1.0x`, max `2.8x`) with a floating **Reset Zoom** chip. Zero-box diegetic philosophy: money lives *inside* the rooms. (The v1 arched window, desk and cellar from `GEMINI_PROTOTYPE.txt` were retired in v1.1.)
 
-1. **Top Floating Study HUD Pill (Minimal & Collapsible):**
-   - Displays **Free Spendable Cash** (Checking minus cash reserved in Goal Chambers) and **Total Net Worth**.
-   - Quick-action **`+Payday`** button (triggers a multi-squirrel acorn delivery sprint).
-   - **Window Scenery Switcher** (`🌳 Meadow` / `🎿 Alpine` / `🦭 Harbor`) to hot-swap the panoramic window scene.
-   - **Zen Mode (`Eye` toggle):** Fades all HUD pills, numbers, and labels so the user can leave the app running on a desk stand as pure ambient art.
-
-2. **Center Layer: Panoramic Arched Study Window (Flame 2D Canvas + Swappable Art Slot):**
-   - Renders the outdoor world through an arched carved-oak window frame.
-   - **Default Scene (`Meadow`):** Sunny/twilight sky, Great Oak branches with permanent upgrade lanterns, swaying leaf hammock with napping squirrel, acorn-tossing squirrel on stump, rare woodland visitors (e.g., *Professor Hoot*), the **Free Cash Acorn Pile** (scales dynamically with unallocated cash), and the **Bills Campfire**.
-   - **Built-In Alternate Window Themes:** Include working animated Flame scenes for **Alpine Ski-Lift & River Tubing** (looping gondola, carving skier, drifting river tubers) and **Sea-Lion Lighthouse Jetty** (lighthouse beam, sunbathing sea lions, rising tide).
-   - **Full-Screen Winter Frostline Mechanic:** Whenever `upcomingUnpaidBills > unallocatedFreeCash`, ice crystals creep onto the windowpanes, snow falls outside, surface squirrels wear knitted scarves, and a subtle icy vignette frames the entire viewport.
-
-3. **Foreground Layer: Carved Oak Desk (Instant Thumb-Reach Instruments):**
-   - **Sand-Art Impulse Silo & Researcher Squirrel:** Transparent glass tube filling with layered colored sand/acorns (**Sky-Blue** = Full Skips, **Mint-Emerald** = Smart Downsizes, **Honey-Gold** = DIY/Home Swaps), auto-forging small wins into **Silver (`$25`)** and **Royal Gold (`$100`)** acorns.
-   - **Green / Yellow / Red *"Treat Yourself!"* Lantern:**
-     - **Green (`TREAT YOURSELF!`):** Bills are covered AND goals are either empty or on pace (`>= 45%` funded) — encourages guilt-free spending on deals/treats without needing a goal or logging a skip.
-     - **Yellow (`MINDFUL PACE`):** Bills are covered, but active goals are still warming up.
-     - **Red (`FROST ALERT`):** Upcoming bills exceed free cash — shelter acorns until payday.
-   - **Brass Focus Shift Clock & Study Squirrel:** Ticks live during focus sessions; opens the Pomodoro/Focus timer (`15m`, `25m`, `45m`, `60m`, plus a quick `10s Demo`), campfire audio toggle, **Warm Hearth** non-punitive streak multiplier (`1.0x` $\rightarrow$ `1.25x` $\rightarrow$ `1.5x`), and the **Golden Leaf Cosmetic Decor Shop** (strictly cosmetic currency—never mixed with real USD).
-   - **Oak Level & Trophy Keepsake Stand:** Displays current Great Oak level (`Lv.1–4`) and miniature relics from completed goals.
-
-4. **Bottom Layer: Cutaway Root Cellar (Below Floorboards):**
-   - **Central Brass Acorn Chute & Wooden Ladder:** Autonomous hauler squirrels carry golden acorns down from the desk/meadow into active Goal Chambers.
-   - **Repeatable *Fallout Shelter* Goal Chambers:** Paginated cleanly (`‹` `›` pegs) so the 1-screen layout scales infinitely. Each chamber evolves visually (`Lv.1 Dirt Alcove` $\rightarrow$ `Lv.2 Timber Chamber` $\rightarrow$ `Lv.3 Gold Treasury`). At `100%`, tapping **Reclaim & Upgrade** seals the chamber, reveals the user's **Time-Capsule Future-Self Note**, places a relic on the Trophy Stand, and upgrades the Great Oak.
-   - **Three Deep Oak-Root Reserves:**
-     - **Amber Reserve (Brokerage / HYSA):** Tracks 1–3 day liquid investments plus a carved **daily passive yield** plaque (`balance * APY / 365`).
-     - **Curio Vault (Collectibles & Bullion):** Tracks graded Pokémon cards, sealed boxes, and silver bullion separately from daily banking.
-     - **Deep Treasury (Roth IRA & 401k):** Locked long-term retirement hoard guarded by a sleeping Golden Elder Squirrel.
+1. **Top HUD (minimal & collapsible):** Free Cash (checking − Goal Chamber allocations), Total Stash (net worth), custom **Acorn** & **Golden Acorn** counters (`AcornIcon` / `GoldenAcornIcon` — never raw emoji), `+Payday`, a Focus Timer quick-pill (no Focus room), the **Starter / Max** room preview switch, the **Privacy Eye**, and **Cozy Zen** (hides all chrome and room icons so the tree is pure ambient art).
+2. **Icon-free tree:** no medallions, labels or dollar figures float over rooms. Each room's name is carved subtly into its own wood (floor plank / station plate). Zooming in fades in extra interior animations; tapping a room glides the camera to it and opens its drawer, whose header shows the **room name + primary dollar total**.
+3. **Swipeable room drawer:** one bottom sheet with a horizontal `PageView` across all rooms in natural order (pills + dots on top); the camera follows each swipe.
+4. **Rooms** (`RoomKey`, top → bottom):
+   - **Canopy Treasury** (Free Cash acorn pile, `+Payday` sprint, Green / Yellow / Red **Treat Yourself Lantern**).
+   - **Hero rooms:** **Acorn Outfitter** (Borrower-scale trinkets with Field Notes, colony wardrobe, Display Pedestals), **Trophy Hall** (stacking trophies, ladders, mystery feats, goal statues, Rocket League-style stats — *no credit-card stats here*), **Squirrel Kitchen** (neutral grocery spend + home-cooked streak), **DC Metro Station** (WMATA fares $2.25 / $2.50 / $6.75 / custom).
+   - **Medium rooms:** **Foraging & Willpower Lab** (pinnable editable habits, Smart Downsize), **Hollow Log Bill Vault** (Etch A Sketch due dates, safety waterline, statement history & card spend insights), **Goal Chambers** (Lv.1 Dirt Alcove → Lv.2 Timber → Lv.3 Gold; reclaim at 100% raises a statue).
+   - **Seven equal-sized deep-root vault pockets:** Brokerage, Pokémon Gallery, Crypto Cavern, ESPP, HYSA & Savings (no automatic APY), Retirement Vault, Silver & Bullion Alcove.
+5. **Winter Frostline:** whenever `upcomingUnpaidBills > unallocatedFreeCash` — snow over the tree, frosted crown, scarves, red lantern, icy full-screen vignette.
+6. **Cosmetic economy (never real USD):** 10 Acorns per $1 of willpower + Focus Shifts; 1 Golden Acorn per $100 cumulative willpower, per reclaimed goal, and per seasonal/ladder milestone. Acorns upgrade rooms (Starter → Cozy → Max); Acorns + Golden Acorns buy Grand Tree upgrades (Treat Lantern Beacon, Seasonal Foliage, Fairy Lights, Twilight Sky, Colony Outfits).
 
 ---
 
 ## 4. Custom Artwork Drop-In Architecture
-The user plans to illustrate custom artwork (Procreate / Illustrator) later. Structure `assets/` and an `AssetManifest` config so custom PNGs can replace procedural placeholders without rewriting game logic:
-- `assets/images/windows/` — Swappable `1200x960` transparent/layered window backdrops (`meadow.png`, `alpine.png`, `harbor.png`, plus a documented `custom_window_template.json` anchor config).
-- `assets/sprites/squirrels/` — Sprite-sheet ready character definitions (`idle`, `tea`, `sleep`, `toss`, `hauler`, `researcher`, `focus`).
-- `assets/images/props/` — Multi-state chest sprites, acorn piles, and frost overlays.
+Custom PNGs replace procedural placeholders without touching game logic (`StashAssetManifest` + `artAssetsProvider`):
+- `assets/images/rooms/` — `<room>.png` room interiors; world boxes in `rooms_template.json`.
+- `assets/images/icons/` — `acorn.png`, `golden_acorn.png`, `<room>.png` medallions (`icons_template.json`).
+- `assets/images/props/` — `chest_lv1..3.png` (`props_manifest.json`).
+- `assets/sprites/squirrels/` — sprite-sheet poses (`idle`, `tea`, `sleep`, `toss`, `hauler`, `researcher`, `focus`, `lantern`) described by `squirrels.json`.
 
 ---
 
@@ -63,26 +47,23 @@ The user plans to illustrate custom artwork (Procreate / Illustrator) later. Str
 Keep every Dart file focused and modular (**target < 300 lines per file**) so future edits touch only 1–2 files instead of burning tokens:
 ```text
 squirrel_stash/
-├── CLAUDE.md
-├── STATUS.md
-├── GEMINI_PROTOTYPE.txt
-├── pubspec.yaml
-├── assets/
-│   ├── images/windows/
-│   ├── sprites/squirrels/
-│   └── audio/
+├── CLAUDE.md  STATUS.md  GEMINI_PROTOTYPE.txt  pubspec.yaml
+├── assets/  images/{rooms,icons,props}/  sprites/squirrels/  audio/  fonts/
 └── lib/
     ├── main.dart
+    ├── core/                  # dates, money, haptics, audio, streaks, market_price_service (http)
     ├── theme/                 # Warm oak, amber, and frost color tokens & typography
-    ├── models/                # Account, Bill, Goal, Trophy, ImpulseChip, ImpulseLog, FocusState
-    ├── database/              # SQLite schema, migrations, and seed data
-    ├── providers/             # Financial calculations, Treat-Yourself logic, Focus timer state
-    ├── game/                  # FlameGame world, window scenes, desk sprites, cellar & squirrel AI
+    ├── models/                # Bill(+Statement), Goal, Trophy, Habit, ImpulseLog, Holding, Room, Feat, …
+    ├── database/              # SQLite schema & migrations (v2), repositories, seed data
+    ├── providers/             # Pure math engines (finance, card insights, feats, stats) + notifiers & actions
+    ├── game/                  # FlameGame, layout, layers (sky, canopy, trunk, lift, weather), rooms/ art
     └── ui/
         ├── home_study_screen.dart
-        ├── widgets/           # Top HUD pill, celebration banners, frost vignette
-        └── drawers/           # Bottom sheets (Cash, Bills, Impulse Lab, Focus Timer, Goals, Vault)
+        ├── diorama/           # TreeStage (InteractiveViewer + camera), invisible room tap hotspots
+        ├── widgets/           # HUD, acorn icons, room medallions, banners, frost vignette
+        └── drawers/           # Swipeable room drawer + one body per room, upgrades, focus, settings
 ```
+Schema changes: bump `Schema.version` and add statements under that version in `Schema.migrations` (never edit shipped statements); add a migration test in `test/sqlite_repository_test.dart`.
 
 ---
 

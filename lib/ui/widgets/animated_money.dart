@@ -1,9 +1,15 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/money.dart';
+import '../../providers/settings_provider.dart';
 
-/// Money text that counts smoothly to its new value (payday tick-ups).
-class AnimatedMoney extends StatelessWidget {
+/// Shown instead of amounts while the Privacy Eye is on.
+const privacyMask = r'$•••';
+
+/// Money text that counts smoothly to its new value (payday tick-ups) and
+/// hides behind [privacyMask] while the Privacy Eye is on.
+class AnimatedMoney extends ConsumerWidget {
   const AnimatedMoney(
     this.cents, {
     super.key,
@@ -22,7 +28,10 @@ class AnimatedMoney extends StatelessWidget {
   final bool exact;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (ref.watch(settingsProvider.select((s) => s.privacyMode))) {
+      return Text('$prefix$privacyMask$suffix', style: style, maxLines: 1, softWrap: false);
+    }
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(end: cents.toDouble()),
       duration: const Duration(milliseconds: 700),

@@ -19,7 +19,7 @@ abstract final class Haptics {
     if (enabled) HapticFeedback.mediumImpact();
   }
 
-  /// Not enough leaves, nothing to sweep.
+  /// Not enough Acorns, nothing to sweep.
   static void warn() {
     if (enabled) HapticFeedback.heavyImpact();
   }

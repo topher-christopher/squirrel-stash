@@ -1,51 +1,75 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/ids.dart';
+import '../models/habit.dart';
 import '../models/impulse.dart';
 import 'repository_providers.dart';
 
-final impulseChipsProvider =
-    NotifierProvider<ImpulseChipsNotifier, List<ImpulseChip>>(
-        ImpulseChipsNotifier.new);
+final habitsProvider =
+    NotifierProvider<HabitsNotifier, List<Habit>>(HabitsNotifier.new);
 
-/// 1-tap temptation chips in the Foraging & Alchemy Lab.
-class ImpulseChipsNotifier extends Notifier<List<ImpulseChip>> {
+/// Editable, pinnable willpower habits in the Foraging & Willpower Lab.
+class HabitsNotifier extends Notifier<List<Habit>> {
   @override
-  List<ImpulseChip> build() =>
-      ref.watch(stashSnapshotProvider).chips.toList()
-        ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+  List<Habit> build() => ref.watch(stashSnapshotProvider).habits.toList()
+    ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
-  ImpulseChip add({
+  void _save(Habit h) => persist(ref.read(stashRepositoryProvider).upsertHabit(h));
+
+  Habit? byId(String? id) => id == null ? null : state.where((h) => h.id == id).firstOrNull;
+
+  Habit? byKey(String key) => state.where((h) => h.key == key).firstOrNull;
+
+  List<Habit> get pinned => state.where((h) => h.pinned).toList();
+
+  Habit add({
     required String label,
     required ImpulseMode mode,
     required int amountCents,
     String? icon,
+    HabitEntry entry = HabitEntry.fixed,
+    bool roundTrip = false,
   }) {
     final nextOrder = state.isEmpty
         ? 0
         : state.map((c) => c.sortOrder).reduce((a, b) => a > b ? a : b) + 1;
-    final chip = ImpulseChip(
-      id: newId('chip'),
+    final habit = Habit(
+      id: newId('habit'),
       label: label,
       mode: mode,
       amountCents: amountCents,
       icon: icon ?? mode.defaultIcon,
+      entry: entry,
+      roundTrip: roundTrip,
       sortOrder: nextOrder,
     );
-    state = [...state, chip];
-    persist(ref.read(stashRepositoryProvider).upsertChip(chip));
-    return chip;
+    state = [...state, habit];
+    _save(habit);
+    return habit;
+  }
+
+  void upsert(Habit habit) {
+    state = [for (final h in state) h.id == habit.id ? habit : h];
+    _save(habit);
+  }
+
+  /// Pins up to [Habit.maxPinned]; returns false when the bar is full.
+  bool togglePin(String id) {
+    final habit = byId(id);
+    if (habit == null) return false;
+    if (!habit.pinned && pinned.length >= Habit.maxPinned) return false;
+    upsert(habit.copyWith(pinned: !habit.pinned));
+    return true;
   }
 
   void remove(String id) {
-    state = [for (final c in state) if (c.id != id) c];
-    persist(ref.read(stashRepositoryProvider).deleteChip(id));
+    state = [for (final h in state) if (h.id != id) h];
+    persist(ref.read(stashRepositoryProvider).deleteHabit(id));
   }
 }
 
 final impulseLogsProvider =
-    NotifierProvider<ImpulseLogsNotifier, List<ImpulseLog>>(
-        ImpulseLogsNotifier.new);
+    NotifierProvider<ImpulseLogsNotifier, List<ImpulseLog>>(ImpulseLogsNotifier.new);
 
 /// Logged willpower wins, newest first.
 class ImpulseLogsNotifier extends Notifier<List<ImpulseLog>> {
@@ -57,13 +81,16 @@ class ImpulseLogsNotifier extends Notifier<List<ImpulseLog>> {
     required String label,
     required ImpulseMode mode,
     required int amountCents,
+    String? habitId,
+    DateTime? at,
   }) {
     final log = ImpulseLog(
       id: newId('log'),
       label: label,
       mode: mode,
       amountCents: amountCents,
-      loggedAt: DateTime.now(),
+      loggedAt: at ?? DateTime.now(),
+      habitId: habitId,
     );
     state = [log, ...state];
     persist(ref.read(stashRepositoryProvider).upsertLogs([log]));
@@ -80,8 +107,10 @@ class ImpulseLogsNotifier extends Notifier<List<ImpulseLog>> {
     persist(ref.read(stashRepositoryProvider).upsertLogs(changed.values.toList()));
   }
 
-  void remove(String id) {
+  ImpulseLog? remove(String id) {
+    final log = state.where((l) => l.id == id).firstOrNull;
     state = [for (final l in state) if (l.id != id) l];
     persist(ref.read(stashRepositoryProvider).deleteLog(id));
+    return log;
   }
 }

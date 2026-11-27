@@ -4,13 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../models/focus_state.dart';
-import '../../models/window_scene.dart';
+import '../../models/ambient_track.dart';
 import '../../providers/focus_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../widgets/stash_controls.dart';
-import 'decor_shop.dart';
+import '../widgets/acorn_icons.dart';
 import 'drawer_shell.dart';
 
 /// Focus Shift Study Companion: timer, ambient audio, Warm Hearth, decor.
@@ -40,7 +40,7 @@ class _FocusDrawerState extends ConsumerState<FocusDrawer> {
     return DrawerShell(
       emoji: '⏳',
       title: 'Focus Shift Study Companion',
-      subtitle: 'Work alongside your study squirrel to earn Golden Leaves for desk & study decor',
+      subtitle: 'Work alongside the colony to earn Acorns for room upgrades',
       children: [
         StashCard(
           border: AppColors.amber.withValues(alpha: 0.35),
@@ -113,7 +113,18 @@ class _FocusDrawerState extends ConsumerState<FocusDrawer> {
         ),
         const SizedBox(height: 12),
         _HearthRow(warmth: settings.hearthWarmth, label: settings.hearthLabel),
-        const DecorShop(),
+        const SizedBox(height: 10),
+        StashCard(
+          child: Row(children: [
+            const AcornIcon(size: 22),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text('A 25-minute shift earns about ${(25 * 2 * settings.hearthMultiplier).round()} Acorns '
+                  '(minutes × 2 × hearth). ${settings.focusShiftsCompleted} shifts completed so far.',
+                  style: AppType.body(12, color: AppColors.stone, height: 1.35)),
+            ),
+          ]),
+        ),
       ],
     );
   }

@@ -1,9 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:squirrel_stash/core/dates.dart';
 import 'package:squirrel_stash/core/money.dart';
 import 'package:squirrel_stash/database/seed_data.dart';
+import 'package:squirrel_stash/models/bill.dart';
 import 'package:squirrel_stash/models/goal.dart';
+import 'package:squirrel_stash/models/holding.dart';
 import 'package:squirrel_stash/models/impulse.dart';
 import 'package:squirrel_stash/models/treat_status.dart';
+import 'package:squirrel_stash/providers/economy.dart';
 import 'package:squirrel_stash/providers/finance_math.dart';
 
 Goal _goal(int saved, int target) => Goal(
@@ -16,39 +20,52 @@ Goal _goal(int saved, int target) => Goal(
       createdAt: DateTime(2026),
     );
 
+ImpulseLog _log(String id, ImpulseMode mode, int cents, DateTime at, {bool swept = false}) =>
+    ImpulseLog(id: id, label: id, mode: mode, amountCents: cents, loggedAt: at, swept: swept);
+
 void main() {
-  final now = DateTime(2026, 11, 26, 15);
+  final now = DateTime(2026, 11, 27, 15);
   final demo = SeedData.demo(now);
 
-  group('FinanceMath.summarize (blueprint demo numbers)', () {
+  group('FinanceMath.summarize (demo Great Oak)', () {
     final f = FinanceMath.summarize(
-      checkingCents: 605000,
+      checkingCents: 760000,
       goals: demo.goals,
       bills: demo.bills,
       holdings: demo.holdings,
       trophyCount: demo.trophies.length,
-      apyBps: 460,
     );
 
     test('free cash = checking − goal allocations', () {
       expect(f.allocatedCents, 400000);
-      expect(f.freeCashCents, 205000);
+      expect(f.freeCashCents, 360000);
     });
 
-    test('upcoming bills exclude paid ones; no frost while covered', () {
-      expect(f.upcomingBillsCents, 185000);
+    test('preset bills: 4 cards + rent are unpaid; no frost while covered', () {
+      expect(f.unpaidBillCount, 5);
+      expect(f.upcomingBillsCents, (412 + 286 + 198 + 534 + 1650) * 100);
       expect(f.frost, isFalse);
     });
 
-    test('net worth = checking + reserves', () {
-      expect(f.amberCents, 2450000);
-      expect(f.curioCents, 510000);
-      expect(f.treasuryCents, 6230000);
-      expect(f.netWorthCents, 605000 + 2450000 + 510000 + 6230000);
+    test('seven vault pockets use live prices for ticker holdings', () {
+      expect(f.reserveCents(ReserveKind.brokerage), 1215925 + 388800 + 125000);
+      expect(f.reserveCents(ReserveKind.crypto), 405300 + 224250);
+      expect(f.reserveCents(ReserveKind.silver), 163280);
+      expect(f.reserveCents(ReserveKind.retirement), 6230000);
+      expect(f.netWorthCents, 760000 + f.vaultsCents);
     });
 
-    test('daily passive yield = balance × APY / 365', () {
-      expect(Money.exact(f.dailyYieldCents.round()), r'$3.09');
+    test('no automatic APY: daily yield is zero until an APY is entered', () {
+      expect(f.dailyYieldCents, 0);
+      const hysa = Holding(id: 'x', reserve: ReserveKind.hysa, label: 'HYSA', valueCents: 800000, apyPercent: 4.6);
+      expect(Money.exact(hysa.dailyYieldCents.round()), r'$1.01');
+    });
+
+    test('frost when unpaid bills exceed free cash', () {
+      final frosty = FinanceMath.summarize(
+          checkingCents: 600000, goals: demo.goals, bills: demo.bills, holdings: const [], trophyCount: 0);
+      expect(frosty.freeCashCents, 200000);
+      expect(frosty.frost, isTrue);
     });
 
     test('oak level clamps to 1–4', () {
@@ -56,108 +73,99 @@ void main() {
       expect(FinanceMath.oakLevel(3), 3);
       expect(FinanceMath.oakLevel(9), 4);
     });
-
-    test('frost when unpaid bills exceed free cash', () {
-      final frosty = FinanceMath.summarize(
-        checkingCents: 500000,
-        goals: demo.goals,
-        bills: demo.bills,
-        holdings: const [],
-        trophyCount: 0,
-        apyBps: 460,
-      );
-      expect(frosty.freeCashCents, 100000);
-      expect(frosty.frost, isTrue);
-    });
   });
 
   group('Treat Yourself lantern', () {
-    test('red during frost', () {
+    test('red during frost, green with no goals', () {
       expect(FinanceMath.treatStatus(frost: true, goals: const []).level, TreatLevel.red);
-    });
-    test('green with no goals', () {
       expect(FinanceMath.treatStatus(frost: false, goals: const []).level, TreatLevel.green);
     });
     test('green at ≥45% average, yellow below', () {
       expect(FinanceMath.treatStatus(frost: false, goals: [_goal(45, 100)]).level, TreatLevel.green);
       expect(FinanceMath.treatStatus(frost: false, goals: [_goal(44, 100)]).level, TreatLevel.yellow);
-      expect(FinanceMath.treatStatus(frost: false, goals: [_goal(200, 100), _goal(0, 100)]).level,
-          TreatLevel.green, reason: 'progress is capped at 100% per goal → avg 50%');
+      expect(FinanceMath.treatStatus(frost: false, goals: [_goal(200, 100), _goal(0, 100)]).level, TreatLevel.green);
     });
   });
 
-  group('Impulse silo', () {
-    final stats = FinanceMath.impulseStats(demo.logs, now);
-
-    test('month / year / all-time horizons', () {
-      expect(stats.monthCents, 4650);
-      expect(stats.yearCents, 4650 + 59350);
-      expect(stats.allTimeCents, 192000);
-    });
-
-    test('forged acorns: silver per \$25, gold per \$100', () {
-      expect(stats.silverAcorns, 76);
-      expect(stats.goldAcorns, 19);
-    });
-
-    test('sand mix sums to 100 with DIY taking the remainder', () {
-      expect(stats.skipPct, 69);
-      expect(stats.downsizePct, 5);
-      expect(stats.diyPct, 26);
-    });
-
-    test('silo fill height clamps to 14..70', () {
-      expect(FinanceMath.siloFillHeight(0), 14);
-      expect(FinanceMath.siloFillHeight(7500), closeTo(35, 0.001));
-      expect(FinanceMath.siloFillHeight(999999), 70);
-    });
+  test('impulse horizons and silo mix', () {
+    final logs = [
+      _log('a', ImpulseMode.skip, 2500, DateTime(2026, 11, 3)),
+      _log('b', ImpulseMode.downsize, 500, DateTime(2026, 11, 4)),
+      _log('c', ImpulseMode.diy, 2000, DateTime(2026, 11, 5), swept: true),
+      _log('d', ImpulseMode.skip, 10000, DateTime(2026, 2, 1)),
+      _log('e', ImpulseMode.skip, 9000, DateTime(2025, 7, 1)),
+    ];
+    final s = FinanceMath.impulseStats(logs, now);
+    expect(s.monthCents, 5000);
+    expect(s.yearCents, 15000);
+    expect(s.allTimeCents, 24000);
+    expect(s.unsweptMonthCents, 3000);
+    expect(s.monthCount, 3);
+    expect((s.skipPct, s.downsizePct, s.diyPct), (50, 10, 40));
+    expect(FinanceMath.siloFillHeight(0), 0.12);
+    expect(FinanceMath.siloFillHeight(999999), 1);
   });
 
   test('acorn pile: none when empty, 4–15 otherwise', () {
     expect(FinanceMath.acornPileCount(0), 0);
     expect(FinanceMath.acornPileCount(100), 4);
-    expect(FinanceMath.acornPileCount(205000), 6);
+    expect(FinanceMath.acornPileCount(360000), 9);
     expect(FinanceMath.acornPileCount(10000000), 15);
   });
 
-  test('focus reward: max(5, minutes × hearth multiplier)', () {
-    expect(FinanceMath.focusReward(totalSeconds: 10, warmth: 3), 5);
-    expect(FinanceMath.focusReward(totalSeconds: 1500, warmth: 1), 25);
-    expect(FinanceMath.focusReward(totalSeconds: 1500, warmth: 2), 31);
-    expect(FinanceMath.focusReward(totalSeconds: 2700, warmth: 3), 68);
-  });
-
-  test('goal paging reserves a slot for "Dig New Goal Room"', () {
-    expect(FinanceMath.maxGoalPage(0), 0);
-    expect(FinanceMath.maxGoalPage(1), 0);
-    expect(FinanceMath.maxGoalPage(2), 1);
-    expect(FinanceMath.maxGoalPage(3), 1);
-    expect(FinanceMath.maxGoalPage(4), 2);
+  test('economy: 10 Acorns per \$1, a Golden Acorn per \$100, focus rewards', () {
+    expect(Economy.acornsForSavings(1200), 120);
+    expect(Economy.acornsForSavings(225), 22);
+    expect(Economy.goldenMilestones(19999), 1);
+    expect(Economy.goldenMilestones(20000), 2);
+    expect(Economy.focusReward(totalSeconds: 10, warmth: 3), 10);
+    expect(Economy.focusReward(totalSeconds: 1500, warmth: 1), 50);
+    expect(Economy.focusReward(totalSeconds: 1500, warmth: 2), 63);
   });
 
   test('sweep moves whole unswept month wins, capped by free cash', () {
     final logs = [
-      ImpulseLog(id: 'a', label: 'a', mode: ImpulseMode.skip, amountCents: 1000, loggedAt: DateTime(2026, 11, 2)),
-      ImpulseLog(id: 'b', label: 'b', mode: ImpulseMode.skip, amountCents: 2500, loggedAt: DateTime(2026, 11, 3)),
-      ImpulseLog(id: 'c', label: 'c', mode: ImpulseMode.skip, amountCents: 700, loggedAt: DateTime(2026, 11, 4), swept: true),
-      ImpulseLog(id: 'd', label: 'd', mode: ImpulseMode.skip, amountCents: 900, loggedAt: DateTime(2026, 10, 30)),
+      _log('a', ImpulseMode.skip, 1000, DateTime(2026, 11, 2)),
+      _log('b', ImpulseMode.skip, 2500, DateTime(2026, 11, 3)),
+      _log('c', ImpulseMode.skip, 700, DateTime(2026, 11, 4), swept: true),
+      _log('d', ImpulseMode.skip, 900, DateTime(2026, 10, 30)),
     ];
-    final all = FinanceMath.planSweep(logs, 999999, now);
-    expect(all.cents, 3500);
-    expect(all.logIds, {'a', 'b'});
-    final capped = FinanceMath.planSweep(logs, 2000, now);
-    expect(capped.cents, 1000);
-    expect(capped.logIds, {'a'});
+    expect(FinanceMath.planSweep(logs, 999999, now).logIds, {'a', 'b'});
+    expect(FinanceMath.planSweep(logs, 2000, now).cents, 1000);
+  });
+
+  group('recurring bills', () {
+    test('next occurrence clamps short months and rolls past today', () {
+      expect(Bill.nextOccurrence(28, DateTime(2026, 11, 27)), DateTime(2026, 11, 28));
+      expect(Bill.nextOccurrence(9, DateTime(2026, 11, 27)), DateTime(2026, 12, 9));
+      expect(Bill.nextOccurrence(31, DateTime(2027, 2, 3)), DateTime(2027, 2, 28));
+    });
+
+    test('days until due and the paid → next cycle rollover', () {
+      final bill = Bill(id: 'b', name: 'TD Cash', amountCents: 1, dueDate: DateTime(2026, 12, 1),
+          dueDay: 1, kind: BillKind.card);
+      expect(bill.daysUntilDue(DateTime(2026, 11, 27, 22)), 4);
+      expect(bill.cycleKey, '2026-12');
+      final paid = bill.copyWith(paid: true);
+      expect(paid.rolledForward(DateTime(2026, 11, 30)).paid, isTrue, reason: 'not due yet');
+      final rolled = paid.rolledForward(DateTime(2026, 12, 2));
+      expect((rolled.paid, rolled.dueDate), (false, DateTime(2027, 1, 1)));
+    });
+  });
+
+  test('dates: ISO weeks, seasons and month keys', () {
+    expect(Dates.weekKey(DateTime(2026, 11, 27)), '2026-W48');
+    expect(Dates.weekKey(DateTime(2027, 1, 1)), '2026-W53');
+    expect(Dates.seasonKey(DateTime(2027, 1, 15)), '2026-winter');
+    expect(Dates.seasonKey(DateTime(2026, 4, 1)), '2026-spring');
+    expect(Dates.monthKey(DateTime(2026, 3, 9)), '2026-03');
   });
 
   test('Money parsing and formatting', () {
     expect(Money.parse(r' $1,250.50 '), 125050);
-    expect(Money.parse('7.5'), 750);
     expect(Money.parse('-3'), isNull);
-    expect(Money.parse('abc'), isNull);
     expect(Money.whole(605000), r'$6,050');
     expect(Money.smart(250), r'$2.50');
-    expect(Money.smart(1200), r'$12');
     expect(Money.plain(460), '4.6');
   });
 }

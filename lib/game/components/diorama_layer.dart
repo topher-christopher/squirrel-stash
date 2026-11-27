@@ -8,6 +8,6 @@ abstract class DioramaLayer extends Component
     with HasGameReference<StashDioramaGame> {
   DioramaLayer({super.priority});
 
-  DioramaSnapshot get snap => game.snapshot;
+  TreeSnapshot get snap => game.snapshot;
   double get t => game.time;
 }

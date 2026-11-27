@@ -6,15 +6,24 @@ import '../../theme/app_typography.dart';
 import '../widgets/stash_controls.dart';
 
 /// Opens a slide-up drawer (bottom sheet) with the study's spring timing.
-Future<T?> showStashDrawer<T>(BuildContext context, WidgetBuilder builder) {
+///
+/// [lightBarrier] keeps the tree bright behind half-height room drawers,
+/// and [enableDrag] is off for sheets that handle their own dragging.
+Future<T?> showStashDrawer<T>(
+  BuildContext context,
+  WidgetBuilder builder, {
+  bool lightBarrier = false,
+  bool enableDrag = true,
+}) {
   Haptics.light();
   return showModalBottomSheet<T>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
+    enableDrag: enableDrag,
     backgroundColor: Colors.transparent,
     elevation: 0,
-    barrierColor: const Color(0xA6000000),
+    barrierColor: lightBarrier ? const Color(0x26000000) : const Color(0xA6000000),
     constraints: const BoxConstraints(maxWidth: 560),
     sheetAnimationStyle: const AnimationStyle(
       duration: Duration(milliseconds: 440),
@@ -22,6 +31,71 @@ Future<T?> showStashDrawer<T>(BuildContext context, WidgetBuilder builder) {
     ),
     builder: builder,
   );
+}
+
+/// Shared carved-oak sheet background.
+const drawerDecoration = BoxDecoration(
+  gradient: LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [Color(0xFF2E190D), Color(0xFF1C0F07)],
+  ),
+  borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+  border: Border(top: BorderSide(color: Color(0x80F59E0B), width: 2)),
+  boxShadow: [BoxShadow(color: Color(0x99000000), blurRadius: 30, offset: Offset(0, -6))],
+);
+
+/// Grab handle at the top of every sheet.
+class DrawerHandle extends StatelessWidget {
+  const DrawerHandle({super.key});
+
+  @override
+  Widget build(BuildContext context) => Center(
+        child: Container(
+          margin: const EdgeInsets.only(top: 10, bottom: 6),
+          width: 42,
+          height: 5,
+          decoration: BoxDecoration(
+            color: AppColors.amber.withValues(alpha: 0.35),
+            borderRadius: BorderRadius.circular(3),
+          ),
+        ),
+      );
+}
+
+/// Round close peg.
+class ClosePeg extends StatelessWidget {
+  const ClosePeg({super.key});
+
+  @override
+  Widget build(BuildContext context) => PressScale(
+        onTap: () {
+          Haptics.tap();
+          Navigator.of(context).maybePop();
+        },
+        child: Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(color: AppColors.stoneDeep, borderRadius: BorderRadius.circular(19)),
+          child: const Icon(Icons.close_rounded, size: 20, color: AppColors.honey),
+        ),
+      );
+}
+
+/// One scrollable page of the swipeable room drawer.
+class RoomPage extends StatelessWidget {
+  const RoomPage({super.key, required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final media = MediaQuery.of(context);
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(18, 4, 18, 22 + media.viewInsets.bottom + media.padding.bottom),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
+    );
+  }
 }
 
 /// Carved-oak drawer chrome: grab handle, emoji badge, title, close peg and
@@ -47,31 +121,12 @@ class DrawerShell extends StatelessWidget {
     final media = MediaQuery.of(context);
     return Container(
       constraints: BoxConstraints(maxHeight: media.size.height * 0.88),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF2E190D), Color(0xFF1C0F07)],
-        ),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-        border: Border(top: BorderSide(color: AppColors.amber.withValues(alpha: 0.5), width: 2)),
-        boxShadow: const [BoxShadow(color: Color(0x99000000), blurRadius: 30, offset: Offset(0, -6))],
-      ),
+      decoration: drawerDecoration,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Center(
-            child: Container(
-              margin: const EdgeInsets.only(top: 10, bottom: 6),
-              width: 42,
-              height: 5,
-              decoration: BoxDecoration(
-                color: AppColors.amber.withValues(alpha: 0.35),
-                borderRadius: BorderRadius.circular(3),
-              ),
-            ),
-          ),
+          const DrawerHandle(),
           Padding(
             padding: const EdgeInsets.fromLTRB(18, 6, 12, 8),
             child: Row(
@@ -101,18 +156,7 @@ class DrawerShell extends StatelessWidget {
                     ],
                   ),
                 ),
-                PressScale(
-                  onTap: () {
-                    Haptics.tap();
-                    Navigator.of(context).maybePop();
-                  },
-                  child: Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(color: AppColors.stoneDeep, borderRadius: BorderRadius.circular(19)),
-                    child: const Icon(Icons.close_rounded, size: 20, color: AppColors.honey),
-                  ),
-                ),
+                const ClosePeg(),
               ],
             ),
           ),

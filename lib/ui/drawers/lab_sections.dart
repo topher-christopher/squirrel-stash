@@ -5,12 +5,14 @@ import '../../core/dates.dart';
 import '../../core/haptics.dart';
 import '../../core/money.dart';
 import '../../models/impulse.dart';
+import '../../providers/finance_math.dart';
 import '../../providers/finance_providers.dart';
 import '../../providers/goals_provider.dart';
 import '../../providers/impulse_provider.dart';
-import '../../providers/stash_actions.dart';
+import '../../providers/willpower_actions.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
+import '../widgets/acorn_icons.dart';
 import '../widgets/stash_controls.dart';
 import 'lab_drawer.dart';
 
@@ -47,8 +49,7 @@ class _DownsizeCalculatorState extends ConsumerState<DownsizeCalculator> {
         border: AppColors.emerald.withValues(alpha: 0.35),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Text('🥤 Smart Downsize Calculator', style: AppType.title(14, color: AppColors.emeraldSoft)),
-          Text('Ordered small instead of large? Bank the difference.',
-              style: AppType.body(11.5, color: AppColors.stoneDim)),
+          Text('Ordered small instead of large? Bank the difference.', style: AppType.body(11.5, color: AppColors.stoneDim)),
           const SizedBox(height: 10),
           StashField(controller: _label, hint: 'Item name', onChanged: (_) => setState(() {})),
           const SizedBox(height: 8),
@@ -63,7 +64,7 @@ class _DownsizeCalculatorState extends ConsumerState<DownsizeCalculator> {
             color: AppColors.emeraldButton,
             expand: true,
             onPressed: _diff > 0
-                ? () => ref.read(stashActionsProvider).logWin(
+                ? () => ref.read(willpowerActionsProvider).logWin(
                     _label.text.trim().isEmpty ? 'Smart Downsize' : _label.text, ImpulseMode.downsize, _diff)
                 : null,
           ),
@@ -80,61 +81,42 @@ class _DownsizeCalculatorState extends ConsumerState<DownsizeCalculator> {
       );
 }
 
-/// + Save Custom Temptation Chip (adds the chip and logs it immediately).
-class CustomChipForm extends ConsumerStatefulWidget {
-  const CustomChipForm({super.key});
+/// Silo sand mix + progress to the next Golden Acorn.
+class SiloLegend extends StatelessWidget {
+  const SiloLegend({super.key, required this.stats});
+
+  final ImpulseStats stats;
 
   @override
-  ConsumerState<CustomChipForm> createState() => _CustomChipFormState();
-}
-
-class _CustomChipFormState extends ConsumerState<CustomChipForm> {
-  final _label = TextEditingController();
-  final _amount = TextEditingController();
-  ImpulseMode _mode = ImpulseMode.skip;
-
-  @override
-  void dispose() {
-    _label.dispose();
-    _amount.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    final ok = ref
-        .read(stashActionsProvider)
-        .addChipAndLog(_label.text, _mode, Money.parse(_amount.text) ?? 0);
-    if (!ok) {
-      Haptics.warn();
-      return;
-    }
-    _label.clear();
-    _amount.clear();
-    FocusScope.of(context).unfocus();
-  }
-
-  @override
-  Widget build(BuildContext context) => StashCard(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text('+ Save Custom Temptation Chip', style: AppType.title(14, color: AppColors.honey)),
-          const SizedBox(height: 10),
-          Row(children: [
-            Expanded(flex: 3, child: StashField(controller: _label, hint: 'e.g. Skipped Coffee Run')),
-            const SizedBox(width: 8),
-            Expanded(flex: 2, child: StashField(controller: _amount, money: true, hint: '0')),
+  Widget build(BuildContext context) {
+    Widget swatch(Color c, String label, int pct) => Expanded(
+          child: Row(children: [
+            Container(width: 10, height: 10, decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(3))),
+            const SizedBox(width: 5),
+            Flexible(child: Text('$label $pct%', style: AppType.body(11.5, color: AppColors.stone), overflow: TextOverflow.ellipsis)),
           ]),
-          const SizedBox(height: 10),
-          ChoicePills<ImpulseMode>(
-            values: ImpulseMode.values,
-            selected: _mode,
-            label: (m) => '${m.defaultIcon} ${m.label}',
-            onSelected: (m) => setState(() => _mode = m),
-            color: modeColor(_mode),
-          ),
-          const SizedBox(height: 10),
-          PillButton(label: 'Add & Log', expand: true, onPressed: _submit),
+        );
+    final toNext = 10000 - stats.allTimeCents % 10000;
+    return StashCard(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Column(children: [
+        Row(children: [
+          swatch(AppColors.sandSkip, 'Skips', stats.skipPct),
+          swatch(AppColors.sandDownsize, 'Downsizes', stats.downsizePct),
+          swatch(AppColors.sandDiy, 'Swaps', stats.diyPct),
         ]),
-      );
+        const SizedBox(height: 8),
+        Row(children: [
+          const GoldenAcornIcon(size: 16),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text('${Money.smart(toNext)} more willpower forges your next Golden Acorn • 10 Acorns per \$1',
+                style: AppType.body(11.5, weight: FontWeight.w800, color: AppColors.amberBright)),
+          ),
+        ]),
+      ]),
+    );
+  }
 }
 
 /// One-tap sweep of this month's unswept savings into a goal chamber.
@@ -162,8 +144,7 @@ class SweepSection extends ConsumerWidget {
             PillButton(
               label: '${g.priority ? '⭐ ' : ''}${g.icon} ${g.name}',
               dense: true,
-              color: AppColors.amber,
-              onPressed: unswept > 0 ? () => ref.read(stashActionsProvider).sweepToGoal(g.id) : null,
+              onPressed: unswept > 0 ? () => ref.read(willpowerActionsProvider).sweepToGoal(g.id) : null,
             ),
         ]),
       ]),
@@ -187,7 +168,7 @@ class RecentWins extends ConsumerWidget {
           direction: DismissDirection.endToStart,
           onDismissed: (_) {
             Haptics.tap();
-            ref.read(impulseLogsProvider.notifier).remove(log.id);
+            ref.read(willpowerActionsProvider).undoLog(log.id);
           },
           background: Container(
             alignment: Alignment.centerRight,

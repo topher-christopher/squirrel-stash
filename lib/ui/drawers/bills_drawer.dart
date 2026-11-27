@@ -5,25 +5,178 @@ import '../../core/dates.dart';
 import '../../core/haptics.dart';
 import '../../core/money.dart';
 import '../../models/bill.dart';
+import '../../models/room.dart';
 import '../../providers/bills_provider.dart';
 import '../../providers/finance_providers.dart';
+import '../../providers/willpower_actions.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../widgets/stash_controls.dart';
+import 'card_insights_view.dart';
+import 'decor_shop.dart';
 import 'drawer_shell.dart';
+import 'etch_board.dart';
 import 'prompts.dart';
 
-/// Campfire & Winter Frostline: upcoming bills vs. free cash.
-class BillsDrawer extends ConsumerStatefulWidget {
-  const BillsDrawer({super.key});
+/// Hollow Log Bill Vault: Etch A Sketch due dates, the safety waterline,
+/// bills (statements for cards), card spend insights and adding bills.
+class BillsBody extends ConsumerWidget {
+  const BillsBody({super.key});
 
   @override
-  ConsumerState<BillsDrawer> createState() => _BillsDrawerState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bills = ref.watch(billsProvider);
+    final f = ref.watch(financeProvider);
+    return RoomPage(children: [
+      const EtchBoard(),
+      const SizedBox(height: 12),
+      AnimatedContainer(
+        duration: const Duration(milliseconds: 400),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: f.frost ? const Color(0xB3450A0A) : const Color(0x990C4A6E),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: (f.frost ? AppColors.alert : AppColors.sky).withValues(alpha: 0.5)),
+        ),
+        child: Text(
+          f.frost
+              ? '❄️ Below the waterline: unpaid bills (${Money.whole(f.upcomingBillsCents)}) exceed Free Cash (${Money.whole(f.freeCashCents)})'
+              : '🌊 Above the waterline: Free Cash (${Money.whole(f.freeCashCents)}) covers unpaid bills (${Money.whole(f.upcomingBillsCents)})',
+          style: AppType.body(12.5, weight: FontWeight.w800, color: f.frost ? const Color(0xFFFEE2E2) : const Color(0xFFE0F2FE)),
+        ),
+      ),
+      SectionLabel('Bills', trailing: Text('Tap a bill for options', style: AppType.body(11, color: AppColors.stoneDim))),
+      if (bills.isEmpty)
+        Text('No bills yet — the vault is quiet.', style: AppType.body(13, color: AppColors.stoneDim)),
+      for (final bill in bills) ...[
+        _BillRow(bill: bill, onTap: () => _billMenu(context, ref, bill)),
+        const SizedBox(height: 8),
+      ],
+      const SectionLabel('Credit Card Spend Insights'),
+      const CardInsightsView(),
+      const SectionLabel('+ Add Bill'),
+      const _AddBillForm(),
+      const RoomUpgradeCard(room: RoomKey.billVault),
+    ]);
+  }
+
+  Future<void> _billMenu(BuildContext context, WidgetRef ref, Bill bill) async {
+    Haptics.light();
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: AppColors.plaque,
+      builder: (c) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(title: Text(bill.name, style: AppType.title(16, color: AppColors.honey))),
+          if (bill.isCard)
+            _option(c, 'statement', Icons.receipt_long_rounded, 'Enter statement balance'),
+          _option(c, 'paid', bill.paid ? Icons.undo_rounded : Icons.check_circle_rounded,
+              bill.paid ? 'Mark unpaid' : 'Mark paid'),
+          _option(c, 'edit', Icons.edit_rounded, 'Edit name & amount'),
+          _option(c, 'delete', Icons.delete_outline_rounded, 'Remove bill'),
+        ]),
+      ),
+    );
+    if (choice == null || !context.mounted) return;
+    final notifier = ref.read(billsProvider.notifier);
+    switch (choice) {
+      case 'statement':
+        final cents = await promptAmount(context,
+            title: '${bill.name} statement',
+            message: 'Statement balance for ${Dates.monthKeyLabel(bill.cycleKey)}. Saved to your card history.',
+            initialCents: bill.amountCents,
+            confirmLabel: 'Save statement');
+        if (cents != null) ref.read(willpowerActionsProvider).recordStatement(bill, cents);
+      case 'paid':
+        notifier.togglePaid(bill.id);
+        Haptics.tap();
+      case 'edit':
+        final result = await promptLabelAmount(context,
+            title: 'Edit bill', labelHint: 'Bill name', initialLabel: bill.name, initialCents: bill.amountCents);
+        if (result != null) notifier.upsert(bill.copyWith(name: result.$1, amountCents: result.$2));
+      case 'delete':
+        final ok = await confirmAction(context,
+            title: 'Remove ${bill.name}?', message: 'The bill and its statement history will be deleted.',
+            confirmLabel: 'Remove', destructive: true);
+        if (ok) notifier.remove(bill.id);
+    }
+  }
+
+  static Widget _option(BuildContext c, String value, IconData icon, String label) => ListTile(
+        leading: Icon(icon, color: AppColors.honey),
+        title: Text(label, style: AppType.body(14)),
+        onTap: () => Navigator.of(c).pop(value),
+      );
 }
 
-class _BillsDrawerState extends ConsumerState<BillsDrawer> {
+class _BillRow extends StatelessWidget {
+  const _BillRow({required this.bill, required this.onTap});
+
+  final Bill bill;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final days = bill.daysUntilDue(DateTime.now());
+    final soon = !bill.paid && days <= EtchBoard.urgentDays;
+    return PressScale(
+      onTap: onTap,
+      scale: 0.98,
+      child: StashCard(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        border: soon ? AppColors.alert.withValues(alpha: 0.5) : null,
+        child: Row(children: [
+          Icon(switch (bill.kind) {
+            BillKind.card => Icons.credit_card_rounded,
+            BillKind.rent => Icons.home_rounded,
+            BillKind.other => Icons.receipt_rounded,
+          }, size: 20, color: AppColors.honey),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(bill.name,
+                  style: AppType.body(14, weight: FontWeight.w800, color: bill.paid ? AppColors.stoneDim : AppColors.cream)
+                      .copyWith(decoration: bill.paid ? TextDecoration.lineThrough : null)),
+              Text(
+                  '${bill.recurring ? 'Every ${_ordinal(bill.dueDay!)}' : 'Due'} • ${Dates.short(bill.dueDate)}'
+                  '${bill.isCard ? ' • variable' : ''}',
+                  style: AppType.body(11, color: AppColors.honey.withValues(alpha: 0.7))),
+            ]),
+          ),
+          Text(bill.amountCents == 0 ? 'Set' : Money.smart(bill.amountCents), style: AppType.number(15, color: AppColors.honey)),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: bill.paid ? const Color(0xCC064E3B) : (soon ? const Color(0xCC7F1D1D) : const Color(0xCC7C2D12)),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(bill.paid ? 'Paid' : (days <= 0 ? (days == 0 ? 'Today' : 'Late') : '${days}d'),
+                style: AppType.body(11, weight: FontWeight.w800, color: bill.paid ? AppColors.emeraldSoft : const Color(0xFFFED7AA))),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  static String _ordinal(int d) {
+    if (d >= 11 && d <= 13) return '${d}th';
+    return switch (d % 10) { 1 => '${d}st', 2 => '${d}nd', 3 => '${d}rd', _ => '${d}th' };
+  }
+}
+
+class _AddBillForm extends ConsumerStatefulWidget {
+  const _AddBillForm();
+
+  @override
+  ConsumerState<_AddBillForm> createState() => _AddBillFormState();
+}
+
+class _AddBillFormState extends ConsumerState<_AddBillForm> {
   final _name = TextEditingController();
   final _amount = TextEditingController();
+  BillKind _kind = BillKind.other;
+  bool _monthly = true;
   DateTime _due = DateTime.now().add(const Duration(days: 7));
 
   @override
@@ -34,96 +187,39 @@ class _BillsDrawerState extends ConsumerState<BillsDrawer> {
   }
 
   void _add() {
-    final cents = Money.parse(_amount.text);
-    if (_name.text.trim().isEmpty || cents == null || cents <= 0) {
+    final cents = Money.parse(_amount.text) ?? 0;
+    if (_name.text.trim().isEmpty) {
       Haptics.warn();
       return;
     }
-    ref.read(billsProvider.notifier).add(name: _name.text.trim(), amountCents: cents, dueDate: _due);
+    final due = _monthly ? Bill.nextOccurrence(_due.day, DateTime.now()) : _due;
+    ref.read(billsProvider.notifier).add(
+        name: _name.text.trim(), amountCents: cents, dueDate: due, kind: _kind, dueDay: _monthly ? _due.day : null);
     _name.clear();
     _amount.clear();
     FocusScope.of(context).unfocus();
     Haptics.success();
   }
 
-  Future<void> _edit(Bill bill) async {
-    final result = await promptLabelAmount(context,
-        title: 'Edit bill', labelHint: 'Bill name', initialLabel: bill.name, initialCents: bill.amountCents);
-    if (result != null) {
-      ref.read(billsProvider.notifier).upsert(bill.copyWith(name: result.$1, amountCents: result.$2));
-    }
-  }
-
   @override
-  Widget build(BuildContext context) {
-    final bills = ref.watch(billsProvider);
-    final f = ref.watch(financeProvider);
-    return DrawerShell(
-      emoji: '🔥',
-      title: 'Campfire & Winter Frostline',
-      subtitle: 'Toggle unpaid bills to watch frost creep across your study window & viewport',
-      accent: const Color(0xFFFDBA74),
-      children: [
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 400),
-          padding: const EdgeInsets.all(13),
-          decoration: BoxDecoration(
-            color: f.frost ? const Color(0xB3450A0A) : const Color(0x99052E16),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: (f.frost ? AppColors.alert : AppColors.emeraldBright).withValues(alpha: 0.5)),
-          ),
-          child: Text(
-            f.frost
-                ? '❄️ Frost Warning: Unpaid bills (${Money.whole(f.upcomingBillsCents)}) exceed Free Cash (${Money.whole(f.freeCashCents)})'
-                : '☀️ Warm & Covered: Free Cash (${Money.whole(f.freeCashCents)}) covers all unpaid bills (${Money.whole(f.upcomingBillsCents)})',
-            style: AppType.body(13, weight: FontWeight.w800, color: f.frost ? const Color(0xFFFEE2E2) : const Color(0xFFD1FAE5)),
-          ),
-        ),
-        const SizedBox(height: 12),
-        if (bills.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 18),
-            child: Text('No bills yet — the campfire is cozy and quiet.',
-                textAlign: TextAlign.center, style: AppType.body(13, color: AppColors.stoneDim)),
-          ),
-        for (final bill in bills) ...[
-          Dismissible(
-            key: ValueKey(bill.id),
-            direction: DismissDirection.endToStart,
-            background: Container(
-              alignment: Alignment.centerRight,
-              padding: const EdgeInsets.only(right: 20),
-              decoration: BoxDecoration(color: const Color(0xFF7F1D1D), borderRadius: BorderRadius.circular(18)),
-              child: const Icon(Icons.delete_outline_rounded, color: Colors.white),
-            ),
-            confirmDismiss: (_) => confirmAction(context,
-                title: 'Remove ${bill.name}?', message: 'This bill will be deleted from the Frostline.',
-                confirmLabel: 'Remove', destructive: true),
-            onDismissed: (_) => ref.read(billsProvider.notifier).remove(bill.id),
-            child: _BillRow(
-              bill: bill,
-              onTap: () {
-                Haptics.tap();
-                ref.read(billsProvider.notifier).togglePaid(bill.id);
-              },
-              onLongPress: () => _edit(bill),
-            ),
-          ),
-          const SizedBox(height: 8),
-        ],
-        Text('Tap to mark paid • Long-press to edit • Swipe left to remove',
-            textAlign: TextAlign.center, style: AppType.body(11, color: AppColors.stoneDim)),
-        const SectionLabel('+ Add Upcoming Bill'),
+  Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Row(children: [
           Expanded(flex: 3, child: StashField(controller: _name, hint: 'e.g. Phone Plan')),
           const SizedBox(width: 8),
           Expanded(flex: 2, child: StashField(controller: _amount, money: true, hint: '0')),
         ]),
         const SizedBox(height: 8),
+        ChoicePills<BillKind>(
+          values: BillKind.values,
+          selected: _kind,
+          label: (k) => k.label,
+          onSelected: (k) => setState(() => _kind = k),
+        ),
+        const SizedBox(height: 8),
         Row(children: [
           Expanded(
             child: PillButton(
-              label: '📅 Due ${Dates.short(_due)}',
+              label: _monthly ? '🔁 Monthly on the ${_due.day}' : '📅 Once • ${Dates.short(_due)}',
               outlined: true,
               color: AppColors.honey,
               expand: true,
@@ -134,51 +230,15 @@ class _BillsDrawerState extends ConsumerState<BillsDrawer> {
             ),
           ),
           const SizedBox(width: 8),
-          Expanded(child: PillButton(label: 'Add Bill', color: AppColors.ember, expand: true, onPressed: _add)),
+          PillButton(
+            label: _monthly ? 'Monthly' : 'One-off',
+            dense: true,
+            outlined: true,
+            color: AppColors.sky,
+            onPressed: () => setState(() => _monthly = !_monthly),
+          ),
         ]),
-      ],
-    );
-  }
-}
-
-class _BillRow extends StatelessWidget {
-  const _BillRow({required this.bill, required this.onTap, required this.onLongPress});
-
-  final Bill bill;
-  final VoidCallback onTap;
-  final VoidCallback onLongPress;
-
-  @override
-  Widget build(BuildContext context) => PressScale(
-        onTap: onTap,
-        onLongPress: onLongPress,
-        scale: 0.98,
-        child: StashCard(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: Row(children: [
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(bill.name,
-                    style: AppType.body(14.5, weight: FontWeight.w800, color: bill.paid ? AppColors.stoneDim : AppColors.cream)
-                        .copyWith(decoration: bill.paid ? TextDecoration.lineThrough : null)),
-                const SizedBox(height: 2),
-                Text('Due ${Dates.short(bill.dueDate)}', style: AppType.body(11.5, color: AppColors.honey.withValues(alpha: 0.7))),
-              ]),
-            ),
-            Text(Money.smart(bill.amountCents), style: AppType.number(15, color: AppColors.honey)),
-            const SizedBox(width: 10),
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: bill.paid ? const Color(0xCC064E3B) : const Color(0xCC7C2D12),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(bill.paid ? 'Paid ✓' : 'Upcoming',
-                  style: AppType.body(11.5, weight: FontWeight.w800,
-                      color: bill.paid ? AppColors.emeraldSoft : const Color(0xFFFED7AA))),
-            ),
-          ]),
-        ),
-      );
+        const SizedBox(height: 8),
+        PillButton(label: 'Add Bill', color: AppColors.ember, expand: true, onPressed: _add),
+      ]);
 }

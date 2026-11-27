@@ -25,6 +25,9 @@ dependencies:
   audioplayers: ^6.8.1
   # Currency & date formatting
   intl: ^0.20.3
+  http: ^1.6.0
+  share_plus: ^13.3.1
+  file_picker: ^13.4.1
 
 dev_dependencies:
   flutter_test:
@@ -49,7 +52,8 @@ flutter:
 
   assets:
     - assets/audio/
-    - assets/images/windows/
+    - assets/images/rooms/
+    - assets/images/icons/
     - assets/images/props/
     - assets/sprites/squirrels/
 

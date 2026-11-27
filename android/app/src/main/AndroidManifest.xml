@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Live stock, crypto and silver prices (CoinGecko + Yahoo Finance). -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="SquirrelStash"
         android:name="${applicationName}"

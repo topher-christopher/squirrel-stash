@@ -1,60 +1,56 @@
 import '../models/impulse.dart';
-
-/// Tappable things in the 1-screen study (shared by hotspots and the game).
-enum DioramaTarget {
-  cashPile,
-  campfire,
-  hoot,
-  silo,
-  lantern,
-  clock,
-  trophies,
-  chamberLeft,
-  chamberRight,
-  amber,
-  curio,
-  treasury,
-}
+import '../models/room.dart';
 
 enum DioramaEventKind {
-  /// A tap landed on a diorama object — squash & bounce it.
+  /// A tap landed on a room or critter — squash & bounce it.
   poke,
 
-  /// Payday delivery sprint.
+  /// Payday delivery sprint into the Canopy Treasury.
   payday,
 
-  /// Willpower win logged (sand sparkles in the silo).
+  /// Willpower win logged (sand sparkles in the Foraging Lab).
   impulseWin,
 
-  /// Acorns allocated into a chamber (chute drop).
+  /// Acorns allocated into a Goal Chamber (lift drop).
   allocate,
 
-  /// Goal reclaimed (confetti & golden sparkle).
+  /// Goal reclaimed (confetti & a new statue in the Trophy Hall).
   reclaim,
 
-  /// Professor Hoot gifted leaves.
+  /// Professor Hoot gifted Acorns.
   hootGift,
 
-  /// Focus Shift finished (golden leaf burst at the clock).
+  /// Focus Shift finished (golden leaf burst).
   focusComplete,
 
-  /// Decor bought/toggled (sparkle).
-  decor,
+  /// Room or Grand Tree upgrade bought/toggled (sparkle).
+  upgrade,
+
+  /// Metro fare tapped (a train pulls through).
+  metroRide,
+
+  /// Grocery trip or home-cooked meal (kitchen steam puff).
+  kitchen,
+
+  /// New trophy earned.
+  trophy,
 }
 
-/// One-shot visual effect request sent from the app to the diorama.
+/// One-shot visual effect request sent from the app to the Great Oak.
 class DioramaEvent {
-  const DioramaEvent(this.kind, {this.target, this.mode, this.slot});
+  const DioramaEvent(this.kind, {this.room, this.mode});
 
-  const DioramaEvent.poke(DioramaTarget this.target)
+  const DioramaEvent.poke(RoomKey this.room)
       : kind = DioramaEventKind.poke,
-        mode = null,
-        slot = null;
+        mode = null;
+
+  /// Poke key for critters that are not rooms.
+  static const hoot = 'hoot';
 
   final DioramaEventKind kind;
-  final DioramaTarget? target;
+  final RoomKey? room;
   final ImpulseMode? mode;
 
-  /// Visible chamber slot (0 = left, 1 = right) for allocations.
-  final int? slot;
+  /// Key used by the game's squash-bounce table.
+  String? get pokeKey => room?.name;
 }

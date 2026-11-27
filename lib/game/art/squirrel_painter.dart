@@ -6,25 +6,30 @@ import 'package:flutter/painting.dart' show TextPainter, TextSpan, TextStyle;
 import 'asset_manifest.dart';
 import 'paint_kit.dart';
 import 'palette.dart';
+import 'squirrel_outfits.dart';
 
 enum SquirrelPose { idle, tea, sleep, toss, hauler, researcher, focus, lantern }
 
-/// Costume & prop toggles for a squirrel.
+/// Costume & prop toggles for a squirrel (see `squirrel_outfits.dart`).
 class SquirrelLook {
   const SquirrelLook({
     this.scarf = false,
     this.acorn = false,
     this.golden = false,
-    this.chefHat = false,
-    this.scholarHat = false,
+    this.hat = SquirrelHat.none,
+    this.prop = SquirrelProp.none,
+    this.suit = false,
     this.book = false,
   });
 
   final bool scarf;
   final bool acorn;
   final bool golden;
-  final bool chefHat;
-  final bool scholarHat;
+  final SquirrelHat hat;
+  final SquirrelProp prop;
+
+  /// Navy commuter jacket & tie.
+  final bool suit;
   final bool book;
 }
 
@@ -116,6 +121,7 @@ abstract final class SquirrelPainter {
     canvas.drawOval(body, Kit.fill(fur));
     canvas.drawOval(body, ink);
     canvas.drawOval(Kit.oval(const Offset(2.5, 6), 5, 6.2), Kit.fill(belly));
+    if (look.suit) SquirrelOutfits.suit(canvas);
 
     if (look.scarf) {
       canvas.drawRRect(Kit.rr(const Rect.fromLTWH(-7, -2.5, 15, 4.2), 2),
@@ -173,34 +179,8 @@ abstract final class SquirrelPainter {
         Paint()..filterQuality = FilterQuality.medium);
   }
 
-  static void _paintHats(Canvas canvas, SquirrelLook look) {
-    if (look.chefHat) {
-      canvas.save();
-      canvas.translate(1, -16);
-      final white = Kit.fill(const Color(0xFFFFFFFF));
-      canvas.drawRRect(Kit.rr(const Rect.fromLTWH(-5, -3, 10, 4), 1.5), white);
-      canvas.drawRRect(Kit.rr(const Rect.fromLTWH(-5, -3, 10, 4), 1.5),
-          Kit.stroke(Pal.acornCap, 0.8));
-      canvas.drawCircle(const Offset(-3, -5), 3.2, white);
-      canvas.drawCircle(const Offset(3, -5), 3.2, white);
-      canvas.drawCircle(const Offset(0, -6.5), 3.8, white);
-      canvas.restore();
-    } else if (look.scholarHat) {
-      canvas.save();
-      canvas.translate(1, -15);
-      final board = Path()
-        ..moveTo(-8, -2)
-        ..lineTo(0, -6)
-        ..lineTo(8, -2)
-        ..lineTo(0, 2)
-        ..close();
-      canvas.drawPath(board, Kit.fill(const Color(0xFF1E293B)));
-      canvas.drawPath(board, Kit.stroke(Pal.brass, 0.8));
-      canvas.drawLine(const Offset(6, -2), const Offset(7.5, 3), Kit.stroke(Pal.brass, 1.1));
-      canvas.drawCircle(const Offset(7.5, 3.4), 0.9, Kit.fill(Pal.brass));
-      canvas.restore();
-    }
-  }
+  static void _paintHats(Canvas canvas, SquirrelLook look) =>
+      SquirrelOutfits.hat(canvas, look.hat);
 
   static void _paintFace(Canvas canvas, SquirrelPose pose, double time, double seed) {
     final ink = Kit.stroke(Pal.outline, 1.3);
@@ -286,8 +266,10 @@ abstract final class SquirrelPainter {
         break;
     }
     if (look.acorn) {
-      Kit.acorn(canvas, const Offset(8, 1), rx: 4.2, ry: 5);
+      Kit.acorn(canvas, const Offset(8, 1), rx: 4.2, ry: 5,
+          body: look.golden ? Pal.gold : Pal.acorn);
       canvas.drawOval(Kit.oval(const Offset(4.8, 3), 2, 1.6), paw);
     }
+    SquirrelOutfits.prop(canvas, look.prop, time, seed, paw);
   }
 }
